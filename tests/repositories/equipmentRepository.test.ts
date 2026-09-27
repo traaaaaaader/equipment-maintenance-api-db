@@ -79,4 +79,22 @@ describe('EquipmentRepository', () => {
   it('delete on an unknown id returns false', async () => {
     expect(await equipmentRepository.delete('00000000-0000-4000-8000-000000000000')).toBe(false);
   });
+
+  it('allows reusing a serial number after the previous holder was soft-deleted', async () => {
+    const serialNumber = `SN-${Math.random().toString(36).slice(2, 10)}`;
+    const original = await equipmentRepository.create(sample({ serialNumber, name: 'Original' }));
+
+    expect(await equipmentRepository.delete(original.id)).toBe(true);
+
+    const replacement = await equipmentRepository.create(sample({ serialNumber, name: 'Replacement' }));
+    expect(replacement.id).not.toBe(original.id);
+    expect(replacement.serialNumber).toBe(serialNumber);
+  });
+
+  it('still rejects a duplicate serial number while the original is active', async () => {
+    const serialNumber = `SN-${Math.random().toString(36).slice(2, 10)}`;
+    await equipmentRepository.create(sample({ serialNumber }));
+
+    await expect(equipmentRepository.create(sample({ serialNumber }))).rejects.toThrow();
+  });
 });
