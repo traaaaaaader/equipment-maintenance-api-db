@@ -15,6 +15,7 @@ import {
   assignBrigadeSchemas,
   removeAssigneeSchemas,
 } from '../validators/requestAssignee.schemas.js';
+import { consumeSparePartSchemas } from '../validators/requestSparePart.schemas.js';
 
 export const requestsRouter = Router();
 
@@ -50,3 +51,10 @@ requestsRouter.delete(
 );
 
 requestsRouter.get('/:id/history', validate(requestHistorySchemas), controller.listHistory);
+
+requestsRouter.post(
+  '/:id/spare-parts',
+  apiKeyAuth,
+  validate(consumeSparePartSchemas),
+  controller.consumeSparePart,
+);
