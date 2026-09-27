@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, type Transaction } from 'sequelize';
 import {
   MaintenanceRequestModel,
   OPEN_STATUSES,
@@ -105,16 +105,23 @@ export class RequestRepository {
     return created.toDto();
   }
 
-  async update(id: string, patch: RequestPatch): Promise<MaintenanceRequest | null> {
-    const request = await MaintenanceRequestModel.findByPk(id);
+  async update(
+    id: string,
+    patch: RequestPatch,
+    transaction?: Transaction,
+  ): Promise<MaintenanceRequest | null> {
+    const request = await MaintenanceRequestModel.findByPk(id, { transaction });
     if (!request) return null;
 
     const { plannedAt, ...rest } = patch;
-    await request.update({
-      ...rest,
-      ...(plannedAt !== undefined ? { plannedAt: plannedAt ? new Date(plannedAt) : null } : {}),
-    });
-    await request.reload({ include: CARD_INCLUDE });
+    await request.update(
+      {
+        ...rest,
+        ...(plannedAt !== undefined ? { plannedAt: plannedAt ? new Date(plannedAt) : null } : {}),
+      },
+      { transaction },
+    );
+    await request.reload({ include: CARD_INCLUDE, transaction });
 
     return request.toDto();
   }

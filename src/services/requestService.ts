@@ -1,6 +1,8 @@
+import { sequelize } from '../db/sequelize.js';
 import { requestRepository } from '../repositories/requestRepository.js';
 import { equipmentRepository } from '../repositories/equipmentRepository.js';
 import { requestAssigneeRepository } from '../repositories/requestAssigneeRepository.js';
+import { requestStatusHistoryRepository } from '../repositories/requestStatusHistoryRepository.js';
 import { ConflictError, NotFoundError } from '../errors/index.js';
 import { isTransitionAllowed } from './requestStatusTransitions.js';
 import type { MaintenanceRequest, RequestFilters, RequestStatus } from '../models/request.model.js';
@@ -52,7 +54,20 @@ export class RequestService {
       }
     }
 
-    return (await requestRepository.update(id, { status: nextStatus })) as MaintenanceRequest;
+    return sequelize.transaction(async (transaction) => {
+      const updated = (await requestRepository.update(
+        id,
+        { status: nextStatus },
+        transaction,
+      )) as MaintenanceRequest;
+
+      await requestStatusHistoryRepository.create(
+        { requestId: id, previousStatus: request.status, newStatus: nextStatus },
+        transaction,
+      );
+
+      return updated;
+    });
   }
 
   async remove(id: string): Promise<void> {
