@@ -40,6 +40,17 @@ export const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
   API_KEYS: csvToArray([]),
+
+  PGHOST: z.string().default('localhost'),
+  PGPORT: stringToNumber(5432),
+  PGDATABASE: z.string().min(1, 'PGDATABASE обязателен'),
+  PGUSER: z.string().min(1, 'PGUSER обязателен'),
+  PGPASSWORD: z.string().min(1, 'PGPASSWORD обязателен'),
+
+  DB_POOL_MAX: stringToNumber(10),
+  DB_POOL_MIN: stringToNumber(0),
+  DB_POOL_ACQUIRE_MS: stringToNumber(30_000),
+  DB_POOL_IDLE_MS: stringToNumber(10_000),
 });
 
 export type Env = z.infer<typeof envSchema>;

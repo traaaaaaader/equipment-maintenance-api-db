@@ -37,4 +37,18 @@ export const config = {
   logLevel: env.LOG_LEVEL,
 
   apiKeys: env.API_KEYS,
+
+  db: {
+    host: env.PGHOST,
+    port: env.PGPORT,
+    database: env.PGDATABASE,
+    user: env.PGUSER,
+    password: env.PGPASSWORD,
+    pool: {
+      max: env.DB_POOL_MAX,
+      min: env.DB_POOL_MIN,
+      acquire: env.DB_POOL_ACQUIRE_MS,
+      idle: env.DB_POOL_IDLE_MS,
+    },
+  },
 } as const;
