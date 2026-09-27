@@ -2,6 +2,7 @@ import type { Express } from 'express';
 import { jest } from '@jest/globals';
 import request from 'supertest';
 import { createTestApp } from './helpers/createTestApp.js';
+import { closeDatabase, resetDatabase } from './helpers/resetDb.js';
 
 let app: Express;
 let equipmentId: string;
@@ -9,6 +10,7 @@ let originalFetch: typeof fetch;
 
 beforeAll(async () => {
   ({ app } = await createTestApp());
+  await resetDatabase();
   originalFetch = global.fetch;
 
   const eq = await request(app).post('/api/equipment').send({
@@ -20,6 +22,8 @@ beforeAll(async () => {
   });
   equipmentId = eq.body.data.id;
 });
+
+afterAll(closeDatabase);
 
 afterEach(() => {
   global.fetch = originalFetch;

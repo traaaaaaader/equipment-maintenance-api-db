@@ -1,12 +1,16 @@
 import type { Express } from 'express';
 import request from 'supertest';
 import { createTestApp } from './helpers/createTestApp.js';
+import { closeDatabase, resetDatabase } from './helpers/resetDb.js';
 
 let app: Express;
 
 beforeAll(async () => {
   ({ app } = await createTestApp({ apiKeys: 'secret-1,secret-2' }));
+  await resetDatabase();
 });
+
+afterAll(closeDatabase);
 
 describe('API key authentication (bonus)', () => {
   const payload = {

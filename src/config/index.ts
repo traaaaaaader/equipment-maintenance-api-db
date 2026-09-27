@@ -41,7 +41,7 @@ export const config = {
   db: {
     host: env.PGHOST,
     port: env.PGPORT,
-    database: env.PGDATABASE,
+    database: env.NODE_ENV === 'test' && env.PGDATABASE_TEST ? env.PGDATABASE_TEST : env.PGDATABASE,
     user: env.PGUSER,
     password: env.PGPASSWORD,
     pool: {

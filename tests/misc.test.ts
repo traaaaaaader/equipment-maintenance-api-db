@@ -1,12 +1,16 @@
 import type { Express } from 'express';
 import request from 'supertest';
 import { createTestApp } from './helpers/createTestApp.js';
+import { closeDatabase, resetDatabase } from './helpers/resetDb.js';
 
 let app: Express;
 
 beforeAll(async () => {
   ({ app } = await createTestApp());
+  await resetDatabase();
 });
+
+afterAll(closeDatabase);
 
 describe('Health, 404 and error format', () => {
   it('GET /api/health returns ok', async () => {
