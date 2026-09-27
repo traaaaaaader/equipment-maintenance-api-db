@@ -574,6 +574,42 @@
           ]
         },
         {
+          "name": "POST /api/requests/:id/spare-parts — consume",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{requestId}}/spare-parts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}", "spare-parts"]
+            },
+            "description": "Атомарно списывает остаток запчасти (UPDATE ... WHERE quantity >= $1) и фиксирует расход по заявке в той же транзакции.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sparePartId\": \"{{sparePartId}}\",\n  \"quantityUsed\": 2\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('usage recorded on the request card', function () {",
+                  "  const part = pm.response.json().data.spareParts.find(function (p) { return p.sparePartId === pm.environment.get('sparePartId'); });",
+                  "  pm.expect(part.quantityUsed).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "DELETE /api/requests/:id/assignees/:userId — remove member",
           "request": {
             "method": "DELETE",
@@ -1197,7 +1233,7 @@
           ]
         },
         {
-          "name": "POST /api/equipment — missing X-API-Key (401, bonus auth)",
+          "name": "POST /api/equipment — missing X-API-Key (401)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],

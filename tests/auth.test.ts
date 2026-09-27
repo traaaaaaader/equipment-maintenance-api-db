@@ -12,7 +12,7 @@ beforeAll(async () => {
 
 afterAll(closeDatabase);
 
-describe('API key authentication (bonus)', () => {
+describe('API key authentication', () => {
   const payload = {
     name: 'Sensor X',
     type: 'sensor',

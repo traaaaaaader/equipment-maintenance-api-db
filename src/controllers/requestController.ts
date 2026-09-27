@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { requestService } from '../services/requestService.js';
 import { requestAssigneeService } from '../services/requestAssigneeService.js';
 import { requestStatusHistoryService } from '../services/requestStatusHistoryService.js';
+import { requestSparePartService } from '../services/requestSparePartService.js';
 import type {
   CreateRequestDto,
   ListRequestsQuery,
@@ -15,6 +16,7 @@ import type {
   AssignBrigadeDto,
   RemoveAssigneeParam,
 } from '../validators/requestAssignee.schemas.js';
+import type { ConsumeSparePartDto } from '../validators/requestSparePart.schemas.js';
 
 export async function list(req: Request, res: Response) {
   const query = req.valid.query as ListRequestsQuery;
@@ -80,6 +82,14 @@ export async function removeAssignee(req: Request, res: Response) {
   const { id, userId } = req.valid.params as RemoveAssigneeParam;
   await requestAssigneeService.remove(id, userId);
   res.status(204).send();
+}
+
+export async function consumeSparePart(req: Request, res: Response) {
+  const { id } = req.valid.params as IdParam;
+  const { sparePartId, quantityUsed } = req.valid.body as ConsumeSparePartDto;
+  await requestSparePartService.consume(id, sparePartId, quantityUsed);
+  const updated = await requestService.getById(id);
+  res.json({ data: updated });
 }
 
 export async function listHistory(req: Request, res: Response) {
