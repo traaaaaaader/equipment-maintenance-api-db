@@ -43,8 +43,8 @@ EquipmentPassportModel.init(
     model: { type: DataTypes.STRING(150), allowNull: false },
     ratedPowerKw: { type: DataTypes.DECIMAL(10, 2), allowNull: false, field: 'rated_power_kw' },
     lastInspectionAt: { type: DataTypes.DATEONLY, allowNull: true, field: 'last_inspection_at' },
-    createdAt: { type: DataTypes.DATE, field: 'created_at' },
-    updatedAt: { type: DataTypes.DATE, field: 'updated_at' },
+    createdAt: { type: DataTypes.DATE, allowNull: false, field: 'created_at' },
+    updatedAt: { type: DataTypes.DATE, allowNull: false, field: 'updated_at' },
   },
   {
     sequelize,

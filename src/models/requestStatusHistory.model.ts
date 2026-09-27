@@ -64,7 +64,7 @@ RequestStatusHistoryModel.init(
     },
     changedBy: { type: DataTypes.STRING(150), allowNull: true, field: 'changed_by' },
     comment: { type: DataTypes.TEXT, allowNull: true },
-    createdAt: { type: DataTypes.DATE, field: 'created_at' },
+    createdAt: { type: DataTypes.DATE, allowNull: false, field: 'created_at' },
   },
   {
     sequelize,

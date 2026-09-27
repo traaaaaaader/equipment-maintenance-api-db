@@ -119,9 +119,9 @@ EquipmentModel.init(
       defaultValue: 'operational',
     },
     installedAt: { type: DataTypes.DATEONLY, allowNull: false, field: 'installed_at' },
-    createdAt: { type: DataTypes.DATE, field: 'created_at' },
-    updatedAt: { type: DataTypes.DATE, field: 'updated_at' },
-    deletedAt: { type: DataTypes.DATE, field: 'deleted_at' },
+    createdAt: { type: DataTypes.DATE, allowNull: false, field: 'created_at' },
+    updatedAt: { type: DataTypes.DATE, allowNull: false, field: 'updated_at' },
+    deletedAt: { type: DataTypes.DATE, allowNull: true, field: 'deleted_at' },
   },
   {
     sequelize,

@@ -50,8 +50,8 @@ SparePartModel.init(
     name: { type: DataTypes.STRING(150), allowNull: false },
     sku: { type: DataTypes.STRING(100), allowNull: false, unique: true },
     quantity: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
-    createdAt: { type: DataTypes.DATE, field: 'created_at' },
-    updatedAt: { type: DataTypes.DATE, field: 'updated_at' },
+    createdAt: { type: DataTypes.DATE, allowNull: false, field: 'created_at' },
+    updatedAt: { type: DataTypes.DATE, allowNull: false, field: 'updated_at' },
   },
   {
     sequelize,

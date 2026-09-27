@@ -44,8 +44,8 @@ RequestAssigneeModel.init(
     technicianId: { type: DataTypes.UUID, allowNull: false, field: 'technician_id' },
     role: { type: DataTypes.ENUM(...ASSIGNEE_ROLES), allowNull: false },
     plannedHours: { type: DataTypes.DECIMAL(6, 2), allowNull: false, field: 'planned_hours' },
-    createdAt: { type: DataTypes.DATE, field: 'created_at' },
-    updatedAt: { type: DataTypes.DATE, field: 'updated_at' },
+    createdAt: { type: DataTypes.DATE, allowNull: false, field: 'created_at' },
+    updatedAt: { type: DataTypes.DATE, allowNull: false, field: 'updated_at' },
   },
   {
     sequelize,

@@ -59,8 +59,8 @@ SiteModel.init(
     region: { type: DataTypes.STRING(150), allowNull: false },
     locationLat: { type: DataTypes.DECIMAL(9, 6), allowNull: false, field: 'location_lat' },
     locationLon: { type: DataTypes.DECIMAL(9, 6), allowNull: false, field: 'location_lon' },
-    createdAt: { type: DataTypes.DATE, field: 'created_at' },
-    updatedAt: { type: DataTypes.DATE, field: 'updated_at' },
+    createdAt: { type: DataTypes.DATE, allowNull: false, field: 'created_at' },
+    updatedAt: { type: DataTypes.DATE, allowNull: false, field: 'updated_at' },
   },
   {
     sequelize,
