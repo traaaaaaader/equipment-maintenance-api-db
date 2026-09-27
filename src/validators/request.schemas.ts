@@ -76,3 +76,12 @@ export const statusRequestSchemas = {
   body: changeStatusSchema,
 };
 export const removeRequestSchemas = { params: requestIdParamSchema };
+
+export const requestHistoryQuerySchema = paginationSchema;
+
+export type RequestHistoryQuery = z.infer<typeof requestHistoryQuerySchema>;
+
+export const requestHistorySchemas = {
+  params: requestIdParamSchema,
+  query: requestHistoryQuerySchema,
+};
