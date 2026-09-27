@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "3666929d-450a-4a4a-b3b8-f5d5313fd8d2",
-    "name": "CaseLab · Кейс 2 — Учёт заявок на обслуживание оборудования",
-    "description": "Покрывает health, equipment и requests. Запросы сохраняют id созданных сущностей в переменные окружения и переиспользуют их дальше по коллекции, поэтому папки нужно гонять по порядку сверху вниз (Collection Runner или вручную).",
+    "name": "CaseLab · Кейс 3 — Перенос на PostgreSQL",
+    "description": "Покрывает health, equipment, requests и новые ресурсы Кейса 3 — назначение бригады, историю статусов, сводку по площадке и отчёт по нагрузке на оборудование. Запросы сохраняют id созданных сущностей в переменные окружения и переиспользуют их дальше по коллекции, поэтому папки нужно гонять по порядку сверху вниз (Collection Runner или вручную). Перед прогоном нужна БД с накатанными миграциями и сидом (`npm run db:migrate && npm run db:seed`) — папки «Sites», «Reports» и назначение бригады в «Requests» используют id специалистов/площадки из демо-данных (`technicianId`, `technicianId2`, `siteId` в окружении), поскольку CRUD-эндпоинтов для специалистов и площадок задание не предусматривает.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -345,6 +345,43 @@
           ]
         },
         {
+          "name": "POST /api/requests/:id/assignees — assign brigade",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{requestId}}/assignees",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}", "assignees"]
+            },
+            "description": "Обязательный шаг перед переводом заявки в in_progress — без бригады переход отклоняется 409. Ровно один специалист с ролью lead.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignees\": [\n    { \"technicianId\": \"{{technicianId}}\", \"role\": \"lead\", \"plannedHours\": 8 },\n    { \"technicianId\": \"{{technicianId2}}\", \"role\": \"member\", \"plannedHours\": 6 }\n  ]\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('brigade has exactly one lead', function () {",
+                  "  const leads = pm.response.json().data.filter(function (a) { return a.role === 'lead'; });",
+                  "  pm.expect(leads).to.have.lengthOf(1);",
+                  "  pm.expect(leads[0].technicianId).to.eql(pm.environment.get('technicianId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "GET /api/requests — list with filters",
           "request": {
             "method": "GET",
@@ -507,6 +544,59 @@
           ]
         },
         {
+          "name": "GET /api/requests/:id/history — status transitions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{requestId}}/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}", "history"]
+            },
+            "description": "К этому моменту заявка прошла new → in_progress → done — в журнале должно быть 2 записи."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('records both transitions in order', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.meta.total).to.eql(2);",
+                  "  pm.expect(json.data.map(function (h) { return h.newStatus; })).to.eql(['in_progress', 'done']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /api/requests/:id/assignees/:userId — remove member",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{requestId}}/assignees/{{technicianId2}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{requestId}}", "assignees", "{{technicianId2}}"]
+            },
+            "description": "Снимает второго специалиста (member), lead остаётся — правило «ровно один lead» проверяется только при назначении, не при снятии."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('status is 204', function () { pm.response.to.have.status(204); });"]
+              }
+            }
+          ]
+        },
+        {
           "name": "DELETE /api/requests/:id",
           "request": {
             "method": "DELETE",
@@ -524,6 +614,158 @@
               "script": {
                 "type": "text/javascript",
                 "exec": ["pm.test('status is 204', function () { pm.response.to.have.status(204); });"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sites",
+      "item": [
+        {
+          "name": "GET /api/sites/:id/summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sites/{{siteId}}/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sites", "{{siteId}}", "summary"]
+            },
+            "description": "siteId — из демо-сида (npm run db:seed), CRUD-эндпоинта для площадок нет."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('has counts by status and priority', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.data).to.have.all.keys('siteId', 'totalRequests', 'byStatus', 'byPriority', 'averageCloseTimeHours');",
+                  "  pm.expect(json.data.byStatus).to.have.all.keys('new', 'in_progress', 'done', 'rejected');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/sites/:id/summary — not found (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sites/00000000-0000-0000-0000-000000000000/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sites", "00000000-0000-0000-0000-000000000000", "summary"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('error.code is NOT_FOUND', function () {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "GET /api/reports/equipment-load",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/equipment-load",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "equipment-load"]
+            },
+            "description": "Raw SQL с JOIN и агрегатами по каждой единице оборудования."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('rows have the expected aggregate shape', function () {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.data).to.be.an('array').that.is.not.empty;",
+                  "  pm.expect(json.data[0]).to.have.all.keys(",
+                  "    'equipmentId', 'equipmentName', 'serialNumber', 'totalRequests', 'closedRequests', 'totalPlannedHours', 'lastMaintenanceAt'",
+                  "  );",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/reports/equipment-load — minRequests filter",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/equipment-load?minRequests=3",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "equipment-load"],
+              "query": [{ "key": "minRequests", "value": "3" }]
+            },
+            "description": "Демо-сид даёт по 3 заявки на каждую единицу оборудования — при minRequests=3 отсекать никого не должно, при большем значении список опустеет."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('every row has at least minRequests requests', function () {",
+                  "  const json = pm.response.json();",
+                  "  json.data.forEach(function (row) { pm.expect(row.totalRequests).to.be.at.least(3); });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/reports/equipment-load — invalid minRequests (422)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/equipment-load?minRequests=-1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "equipment-load"],
+              "query": [{ "key": "minRequests", "value": "-1" }]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('status is 422', function () { pm.response.to.have.status(422); });"]
               }
             }
           ]
@@ -691,12 +933,12 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "await pm.sendRequest({",
+                  "pm.sendRequest({",
                   "  url: pm.environment.get('baseUrl') + '/api/requests',",
                   "  method: 'POST',",
                   "  header: { 'Content-Type': 'application/json', 'X-API-Key': pm.environment.get('apiKey') },",
                   "  body: { mode: 'raw', raw: JSON.stringify({ equipmentId: pm.environment.get('equipmentId'), title: 'Guard request for delete conflict check', priority: 'low' }) }",
-                  "});"
+                  "}, function () {});"
                 ]
               }
             },
@@ -740,22 +982,203 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const created = await pm.sendRequest({",
+                  "pm.sendRequest({",
                   "  url: pm.environment.get('baseUrl') + '/api/requests',",
                   "  method: 'POST',",
                   "  header: { 'Content-Type': 'application/json', 'X-API-Key': pm.environment.get('apiKey') },",
                   "  body: { mode: 'raw', raw: JSON.stringify({ equipmentId: pm.environment.get('equipmentId'), title: 'Guard request for invalid transition check', priority: 'low' }) }",
-                  "});",
-                  "const guardId = created.json().data.id;",
-                  "",
-                  "await pm.sendRequest({",
-                  "  url: pm.environment.get('baseUrl') + '/api/requests/' + guardId + '/status',",
-                  "  method: 'PATCH',",
+                  "}, function (err, created) {",
+                  "  const guardId = created.json().data.id;",
+                  "  pm.sendRequest({",
+                  "    url: pm.environment.get('baseUrl') + '/api/requests/' + guardId + '/status',",
+                  "    method: 'PATCH',",
+                  "    header: { 'Content-Type': 'application/json', 'X-API-Key': pm.environment.get('apiKey') },",
+                  "    body: { mode: 'raw', raw: JSON.stringify({ status: 'rejected' }) }",
+                  "  }, function () {",
+                  "    pm.environment.set('transitionCheckRequestId', guardId);",
+                  "  });",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 409', function () { pm.response.to.have.status(409); });",
+                  "pm.test('error.code is CONFLICT', function () {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('CONFLICT');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/requests/:id/assignees — unknown technician (404), rollback verified",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{assigneeRequestId}}/assignees",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{assigneeRequestId}}", "assignees"]
+            },
+            "description": "Один валидный специалист и один несуществующий id в одном списке. Заводит собственную заявку, чтобы не трогать состояние из папки Requests. После 404 отдельно проверяем, что у заявки не осталось ни одного назначения — операция полностью откатилась, а не применилась частично.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignees\": [\n    { \"technicianId\": \"{{technicianId}}\", \"role\": \"lead\", \"plannedHours\": 5 },\n    { \"technicianId\": \"00000000-0000-0000-0000-000000000000\", \"role\": \"member\", \"plannedHours\": 3 }\n  ]\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({",
+                  "  url: pm.environment.get('baseUrl') + '/api/requests',",
+                  "  method: 'POST',",
                   "  header: { 'Content-Type': 'application/json', 'X-API-Key': pm.environment.get('apiKey') },",
-                  "  body: { mode: 'raw', raw: JSON.stringify({ status: 'rejected' }) }",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ equipmentId: pm.environment.get('equipmentId'), title: 'Guard request for unknown technician check', priority: 'low' }) }",
+                  "}, function (err, created) {",
+                  "  pm.environment.set('assigneeRequestId', created.json().data.id);",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('error.code is NOT_FOUND', function () {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('NOT_FOUND');",
                   "});",
-                  "",
-                  "pm.environment.set('transitionCheckRequestId', guardId);"
+                  "pm.test('rollback: no partial assignees were left behind', function (done) {",
+                  "  pm.sendRequest({",
+                  "    url: pm.environment.get('baseUrl') + '/api/requests/' + pm.environment.get('assigneeRequestId'),",
+                  "    method: 'GET'",
+                  "  }, function (err, card) {",
+                  "    pm.expect(card.json().data.assignees).to.have.lengthOf(0);",
+                  "    done();",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/requests/:id/assignees — duplicate technician in payload (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{assigneeRequestId}}/assignees",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{assigneeRequestId}}", "assignees"]
+            },
+            "description": "Тот же technicianId дважды в одном списке — переиспользует заявку из предыдущего запроса (assigneeRequestId).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignees\": [\n    { \"technicianId\": \"{{technicianId}}\", \"role\": \"lead\", \"plannedHours\": 5 },\n    { \"technicianId\": \"{{technicianId}}\", \"role\": \"member\", \"plannedHours\": 2 }\n  ]\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 409', function () { pm.response.to.have.status(409); });",
+                  "pm.test('error.code is CONFLICT', function () {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('CONFLICT');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/requests/:id/assignees — brigade without a lead (422)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{assigneeRequestId}}/assignees",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{assigneeRequestId}}", "assignees"]
+            },
+            "description": "Только member, ни одного lead.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignees\": [\n    { \"technicianId\": \"{{technicianId}}\", \"role\": \"member\", \"plannedHours\": 5 }\n  ]\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('error.code is VALIDATION_ERROR', function () {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /api/requests/:id/status — in_progress without a brigade (409)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{noBrigadeRequestId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "requests", "{{noBrigadeRequestId}}", "status"]
+            },
+            "description": "Свежая заявка без единого назначенного специалиста — переход в in_progress должен быть отклонён.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\"\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.sendRequest({",
+                  "  url: pm.environment.get('baseUrl') + '/api/requests',",
+                  "  method: 'POST',",
+                  "  header: { 'Content-Type': 'application/json', 'X-API-Key': pm.environment.get('apiKey') },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ equipmentId: pm.environment.get('equipmentId'), title: 'Guard request for no-brigade check', priority: 'low' }) }",
+                  "}, function (err, created) {",
+                  "  pm.environment.set('noBrigadeRequestId', created.json().data.id);",
+                  "});"
                 ]
               }
             },
