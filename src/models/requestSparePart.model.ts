@@ -39,8 +39,8 @@ RequestSparePartModel.init(
     requestId: { type: DataTypes.UUID, allowNull: false, field: 'request_id' },
     sparePartId: { type: DataTypes.UUID, allowNull: false, field: 'spare_part_id' },
     quantityUsed: { type: DataTypes.INTEGER, allowNull: false, field: 'quantity_used' },
-    createdAt: { type: DataTypes.DATE, field: 'created_at' },
-    updatedAt: { type: DataTypes.DATE, field: 'updated_at' },
+    createdAt: { type: DataTypes.DATE, allowNull: false, field: 'created_at' },
+    updatedAt: { type: DataTypes.DATE, allowNull: false, field: 'updated_at' },
   },
   {
     sequelize,
