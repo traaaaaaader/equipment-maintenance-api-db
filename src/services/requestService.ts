@@ -36,25 +36,28 @@ export class RequestService {
   }
 
   async changeStatus(id: string, nextStatus: RequestStatus): Promise<MaintenanceRequest> {
-    const request = await this.getById(id);
-
-    if (!isTransitionAllowed(request.status, nextStatus)) {
-      throw new ConflictError(
-        `Недопустимый переход статуса: ${request.status} -> ${nextStatus}`,
-        [{ field: 'status', message: `Из статуса "${request.status}" переход в "${nextStatus}" запрещён` }],
-      );
-    }
-
-    if (nextStatus === 'in_progress') {
-      const assigneeCount = await requestAssigneeRepository.countByRequestId(id);
-      if (assigneeCount === 0) {
-        throw new ConflictError('Нельзя перевести заявку в работу без назначенных исполнителей', [
-          { field: 'status', message: 'Сначала назначьте бригаду через POST /requests/:id/assignees' },
-        ]);
-      }
-    }
+    await this.getById(id);
 
     return sequelize.transaction(async (transaction) => {
+      const locked = await requestRepository.findStatusForUpdate(id, transaction);
+      if (!locked) throw new NotFoundError(`Заявка ${id} не найдена`);
+
+      if (!isTransitionAllowed(locked.status, nextStatus)) {
+        throw new ConflictError(
+          `Недопустимый переход статуса: ${locked.status} -> ${nextStatus}`,
+          [{ field: 'status', message: `Из статуса "${locked.status}" переход в "${nextStatus}" запрещён` }],
+        );
+      }
+
+      if (nextStatus === 'in_progress') {
+        const assigneeCount = await requestAssigneeRepository.countByRequestId(id, transaction);
+        if (assigneeCount === 0) {
+          throw new ConflictError('Нельзя перевести заявку в работу без назначенных исполнителей', [
+            { field: 'status', message: 'Сначала назначьте бригаду через POST /requests/:id/assignees' },
+          ]);
+        }
+      }
+
       const updated = (await requestRepository.update(
         id,
         { status: nextStatus },
@@ -62,7 +65,7 @@ export class RequestService {
       )) as MaintenanceRequest;
 
       await requestStatusHistoryRepository.create(
-        { requestId: id, previousStatus: request.status, newStatus: nextStatus },
+        { requestId: id, previousStatus: locked.status, newStatus: nextStatus },
         transaction,
       );
 

@@ -52,8 +52,8 @@ export class RequestAssigneeRepository {
     return RequestAssigneeModel.destroy({ where: { requestId, technicianId } });
   }
 
-  async countByRequestId(requestId: string): Promise<number> {
-    return RequestAssigneeModel.count({ where: { requestId } });
+  async countByRequestId(requestId: string, transaction?: Transaction): Promise<number> {
+    return RequestAssigneeModel.count({ where: { requestId }, transaction });
   }
 }
 
