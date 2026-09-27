@@ -1,5 +1,6 @@
 import { requestRepository } from '../repositories/requestRepository.js';
 import { equipmentRepository } from '../repositories/equipmentRepository.js';
+import { requestAssigneeRepository } from '../repositories/requestAssigneeRepository.js';
 import { ConflictError, NotFoundError } from '../errors/index.js';
 import { isTransitionAllowed } from './requestStatusTransitions.js';
 import type { MaintenanceRequest, RequestFilters, RequestStatus } from '../models/request.model.js';
@@ -40,6 +41,15 @@ export class RequestService {
         `Недопустимый переход статуса: ${request.status} -> ${nextStatus}`,
         [{ field: 'status', message: `Из статуса "${request.status}" переход в "${nextStatus}" запрещён` }],
       );
+    }
+
+    if (nextStatus === 'in_progress') {
+      const assigneeCount = await requestAssigneeRepository.countByRequestId(id);
+      if (assigneeCount === 0) {
+        throw new ConflictError('Нельзя перевести заявку в работу без назначенных исполнителей', [
+          { field: 'status', message: 'Сначала назначьте бригаду через POST /requests/:id/assignees' },
+        ]);
+      }
     }
 
     return (await requestRepository.update(id, { status: nextStatus })) as MaintenanceRequest;

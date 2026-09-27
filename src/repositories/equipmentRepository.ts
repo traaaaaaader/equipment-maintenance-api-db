@@ -1,102 +1,94 @@
-import { randomUUID } from 'node:crypto';
-import type { Equipment, EquipmentFilters } from '../models/equipment.model.js';
+import { Op } from 'sequelize';
+import { EquipmentModel, type Equipment, type EquipmentFilters } from '../models/equipment.model.js';
+import { EquipmentPassportModel } from '../models/equipmentPassport.model.js';
 import type { ListParams, ListResult } from '../models/model.js';
 import type { CreateEquipmentDto, UpdateEquipmentDto } from '../validators/equipment.schemas.js';
 
-function applyFilters(items: Equipment[], filters: EquipmentFilters): Equipment[] {
-  let result = items;
+const PASSPORT_INCLUDE = [{ model: EquipmentPassportModel, as: 'passport' as const }];
 
-  if (filters.type) {
-    result = result.filter((item) => item.type === filters.type);
-  }
-  if (filters.status) {
-    result = result.filter((item) => item.status === filters.status);
-  }
+function buildWhere(filters: EquipmentFilters) {
+  const where: Record<string, unknown> = {};
+
+  if (filters.type) where.type = filters.type;
+  if (filters.status) where.status = filters.status;
+  if (filters.siteId) where.siteId = filters.siteId;
   if (filters.search) {
-    const needle = filters.search.toLowerCase();
-    result = result.filter(
-      (item) =>
-        item.name.toLowerCase().includes(needle) ||
-        item.serialNumber.toLowerCase().includes(needle),
-    );
+    where[Op.or as unknown as string] = [
+      { name: { [Op.iLike]: `%${filters.search}%` } },
+      { serialNumber: { [Op.iLike]: `%${filters.search}%` } },
+    ];
   }
 
-  return result;
+  return where;
 }
 
-function applySort(items: Equipment[], sort?: string): Equipment[] {
-  if (!sort) return items;
-  const direction = sort.startsWith('-') ? -1 : 1;
-  const field = sort.replace(/^-/, '') as keyof Equipment;
-
-  return [...items].sort((a, b) => {
-    const av = a[field];
-    const bv = b[field];
-    if (av === bv) return 0;
-    return av > bv ? direction : -direction;
-  });
+function buildOrder(sort?: string): [string, 'ASC' | 'DESC'][] {
+  if (!sort) return [['createdAt', 'DESC']];
+  const direction = sort.startsWith('-') ? 'DESC' : 'ASC';
+  return [[sort.replace(/^-/, ''), direction]];
 }
 
 export class EquipmentRepository {
-  _items = new Map<string, Equipment>();
-
   async findAll({
     filters = {},
     sort,
     page = 1,
     limit = 20,
   }: ListParams<EquipmentFilters> = {}): Promise<ListResult<Equipment>> {
-    const all = Array.from(this._items.values());
-    const filtered = applySort(applyFilters(all, filters), sort);
-    const total = filtered.length;
-    const start = (page - 1) * limit;
-    const items = filtered.slice(start, start + limit);
+    const { rows, count } = await EquipmentModel.findAndCountAll({
+      where: buildWhere(filters),
+      include: PASSPORT_INCLUDE,
+      order: buildOrder(sort),
+      limit,
+      offset: (page - 1) * limit,
+      distinct: true,
+    });
 
-    return { items, total, page, limit };
+    return { items: rows.map((row) => row.toDto()), total: count, page, limit };
   }
 
   async findById(id: string): Promise<Equipment | null> {
-    return this._items.get(id) ?? null;
+    const equipment = await EquipmentModel.findByPk(id, { include: PASSPORT_INCLUDE });
+    return equipment ? equipment.toDto() : null;
   }
 
   async findBySerialNumber(serialNumber: string): Promise<Equipment | null> {
-    for (const item of this._items.values()) {
-      if (item.serialNumber === serialNumber) return item;
-    }
-    return null;
+    const equipment = await EquipmentModel.findOne({ where: { serialNumber } });
+    return equipment ? equipment.toDto() : null;
   }
 
   async create(data: CreateEquipmentDto): Promise<Equipment> {
-    const now = new Date().toISOString();
-    const entity: Equipment = {
-      id: randomUUID(),
-      ...data,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const created = await EquipmentModel.create({
+      name: data.name,
+      type: data.type,
+      serialNumber: data.serialNumber,
+      locationLat: data.location.lat,
+      locationLon: data.location.lon,
+      status: data.status,
+      installedAt: data.installedAt,
+      siteId: null,
+    });
 
-    this._items.set(entity.id, entity);
-    return entity;
+    return created.toDto();
   }
 
   async update(id: string, patch: UpdateEquipmentDto): Promise<Equipment | null> {
-    const existing = this._items.get(id);
-    if (!existing) return null;
+    const equipment = await EquipmentModel.findByPk(id);
+    if (!equipment) return null;
 
-    const updated: Equipment = {
-      ...existing,
-      ...patch,
-      id: existing.id,
-      createdAt: existing.createdAt,
-      updatedAt: new Date().toISOString(),
-    };
+    const { location, ...rest } = patch;
+    await equipment.update({
+      ...rest,
+      ...(location ? { locationLat: location.lat, locationLon: location.lon } : {}),
+    });
+    await equipment.reload({ include: PASSPORT_INCLUDE });
 
-    this._items.set(id, updated);
-    return updated;
+    return equipment.toDto();
   }
 
   async delete(id: string): Promise<boolean> {
-    return this._items.delete(id);
+    const deleted = await EquipmentModel.destroy({ where: { id } });
+    return deleted > 0;
   }
 }
 
