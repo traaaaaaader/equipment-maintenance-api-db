@@ -9,7 +9,12 @@ import {
   updateRequestSchemas,
   statusRequestSchemas,
   removeRequestSchemas,
+  requestHistorySchemas,
 } from '../validators/request.schemas.js';
+import {
+  assignBrigadeSchemas,
+  removeAssigneeSchemas,
+} from '../validators/requestAssignee.schemas.js';
 
 export const requestsRouter = Router();
 
@@ -29,3 +34,19 @@ requestsRouter.patch(
 requestsRouter.patch('/:id', apiKeyAuth, validate(updateRequestSchemas), controller.update);
 
 requestsRouter.delete('/:id', apiKeyAuth, validate(removeRequestSchemas), controller.remove);
+
+requestsRouter.post(
+  '/:id/assignees',
+  apiKeyAuth,
+  validate(assignBrigadeSchemas),
+  controller.assignBrigade,
+);
+
+requestsRouter.delete(
+  '/:id/assignees/:userId',
+  apiKeyAuth,
+  validate(removeAssigneeSchemas),
+  controller.removeAssignee,
+);
+
+requestsRouter.get('/:id/history', validate(requestHistorySchemas), controller.listHistory);
