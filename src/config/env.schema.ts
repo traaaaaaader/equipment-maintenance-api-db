@@ -44,6 +44,7 @@ export const envSchema = z.object({
   PGHOST: z.string().default('localhost'),
   PGPORT: stringToNumber(5432),
   PGDATABASE: z.string().min(1, 'PGDATABASE обязателен'),
+  PGDATABASE_TEST: z.string().optional(),
   PGUSER: z.string().min(1, 'PGUSER обязателен'),
   PGPASSWORD: z.string().min(1, 'PGPASSWORD обязателен'),
 

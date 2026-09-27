@@ -16,7 +16,9 @@
     "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all",
     "db:migrate:status": "sequelize-cli db:migrate:status",
     "db:seed": "sequelize-cli db:seed:all",
-    "db:seed:undo": "sequelize-cli db:seed:undo:all"
+    "db:seed:undo": "sequelize-cli db:seed:undo:all",
+    "db:migrate:test": "sequelize-cli db:migrate --env test",
+    "db:migrate:test:undo:all": "sequelize-cli db:migrate:undo:all --env test"
   },
   "keywords": [],
   "author": "Trader",
