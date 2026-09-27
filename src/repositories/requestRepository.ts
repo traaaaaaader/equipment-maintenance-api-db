@@ -80,6 +80,18 @@ export class RequestRepository {
     return request ? request.toDto() : null;
   }
 
+  async findStatusForUpdate(
+    id: string,
+    transaction: Transaction,
+  ): Promise<{ status: RequestStatus } | null> {
+    const request = await MaintenanceRequestModel.findByPk(id, {
+      attributes: ['id', 'status'],
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+    return request ? { status: request.status } : null;
+  }
+
   async findByEquipmentId(equipmentId: string): Promise<MaintenanceRequest[]> {
     const rows = await MaintenanceRequestModel.findAll({
       where: { equipmentId },
