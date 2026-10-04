@@ -78,5 +78,10 @@ module.exports = {
     await queryInterface.dropTable('equipment_passports');
     await queryInterface.dropTable('maintenance_requests');
     await queryInterface.dropTable('equipment');
+
+    await queryInterface.dropEnum('enum_maintenance_requests_status');
+    await queryInterface.dropEnum('enum_maintenance_requests_priority');
+    await queryInterface.dropEnum('enum_equipment_status');
+    await queryInterface.dropEnum('enum_equipment_type');
   },
 };

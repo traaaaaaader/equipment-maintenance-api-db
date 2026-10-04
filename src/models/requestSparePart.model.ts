@@ -54,18 +54,26 @@ RequestSparePartModel.init(
 MaintenanceRequestModel.hasMany(RequestSparePartModel, {
   foreignKey: 'requestId',
   as: 'partUsages',
+  onDelete: 'CASCADE',
+  onUpdate: 'CASCADE',
 });
 RequestSparePartModel.belongsTo(MaintenanceRequestModel, {
   foreignKey: 'requestId',
   as: 'request',
+  onDelete: 'CASCADE',
+  onUpdate: 'CASCADE',
 });
 SparePartModel.hasMany(RequestSparePartModel, {
   foreignKey: 'sparePartId',
   as: 'usages',
+  onDelete: 'RESTRICT',
+  onUpdate: 'CASCADE',
 });
 RequestSparePartModel.belongsTo(SparePartModel, {
   foreignKey: 'sparePartId',
   as: 'sparePart',
+  onDelete: 'RESTRICT',
+  onUpdate: 'CASCADE',
 });
 MaintenanceRequestModel.belongsToMany(SparePartModel, {
   through: RequestSparePartModel,

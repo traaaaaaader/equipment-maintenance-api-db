@@ -13,18 +13,22 @@ import { SparePartModel } from '../models/sparePart.model.js';
 import type { ListParams, ListResult } from '../models/model.js';
 import type { CreateRequestDto, UpdateRequestDto } from '../validators/request.schemas.js';
 
-type RequestPatch = UpdateRequestDto & { status?: RequestStatus };
+type RequestPatch = UpdateRequestDto & { status?: RequestStatus; closedAt?: Date };
 
 const CARD_INCLUDE = [
   {
     model: RequestAssigneeModel,
     as: 'assigneeLinks' as const,
-    include: [{ model: TechnicianModel, as: 'technician' as const, attributes: ['id', 'fullName'] }],
+    include: [
+      { model: TechnicianModel, as: 'technician' as const, attributes: ['id', 'fullName'] },
+    ],
   },
   {
     model: RequestSparePartModel,
     as: 'partUsages' as const,
-    include: [{ model: SparePartModel, as: 'sparePart' as const, attributes: ['id', 'name', 'sku'] }],
+    include: [
+      { model: SparePartModel, as: 'sparePart' as const, attributes: ['id', 'name', 'sku'] },
+    ],
   },
 ];
 
@@ -90,6 +94,14 @@ export class RequestRepository {
       lock: transaction.LOCK.UPDATE,
     });
     return request ? { status: request.status } : null;
+  }
+
+  async exists(id: string, transaction?: Transaction): Promise<boolean> {
+    const request = await MaintenanceRequestModel.findByPk(id, {
+      attributes: ['id'],
+      transaction,
+    });
+    return request !== null;
   }
 
   async findByEquipmentId(equipmentId: string): Promise<MaintenanceRequest[]> {

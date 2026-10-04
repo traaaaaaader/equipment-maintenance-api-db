@@ -41,7 +41,7 @@ export class ReportRepository {
          count(DISTINCT mr.id)::int AS total_requests,
          count(DISTINCT mr.id) FILTER (WHERE mr.status = 'done')::int AS closed_requests,
          coalesce(sum(ra.planned_hours), 0)::float AS total_planned_hours,
-         max(mr.updated_at) FILTER (WHERE mr.status = 'done') AS last_maintenance_at
+         max(mr.closed_at) FILTER (WHERE mr.status = 'done') AS last_maintenance_at
        FROM equipment e
        LEFT JOIN maintenance_requests mr
          ON mr.equipment_id = e.id
@@ -62,7 +62,9 @@ export class ReportRepository {
       totalRequests: row.total_requests,
       closedRequests: row.closed_requests,
       totalPlannedHours: row.total_planned_hours,
-      lastMaintenanceAt: row.last_maintenance_at ? new Date(row.last_maintenance_at).toISOString() : null,
+      lastMaintenanceAt: row.last_maintenance_at
+        ? new Date(row.last_maintenance_at).toISOString()
+        : null,
     }));
   }
 }

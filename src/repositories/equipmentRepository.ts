@@ -1,10 +1,20 @@
 import { Op } from 'sequelize';
-import { EquipmentModel, type Equipment, type EquipmentFilters } from '../models/equipment.model.js';
+import {
+  EquipmentModel,
+  type Equipment,
+  type EquipmentFilters,
+} from '../models/equipment.model.js';
 import { EquipmentPassportModel } from '../models/equipmentPassport.model.js';
 import type { ListParams, ListResult } from '../models/model.js';
 import type { CreateEquipmentDto, UpdateEquipmentDto } from '../validators/equipment.schemas.js';
 
-const PASSPORT_INCLUDE = [{ model: EquipmentPassportModel, as: 'passport' as const }];
+const PASSPORT_INCLUDE = [
+  {
+    model: EquipmentPassportModel,
+    as: 'passport' as const,
+    attributes: ['id', 'manufacturer', 'model', 'ratedPowerKw', 'lastInspectionAt'],
+  },
+];
 
 function buildWhere(filters: EquipmentFilters) {
   const where: Record<string, unknown> = {};
@@ -66,7 +76,7 @@ export class EquipmentRepository {
       locationLon: data.location.lon,
       status: data.status,
       installedAt: data.installedAt,
-      siteId: null,
+      siteId: data.siteId ?? null,
     });
 
     return created.toDto();

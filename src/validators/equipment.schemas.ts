@@ -42,6 +42,7 @@ export const createEquipmentSchema = z.object({
     })
     .default('operational'),
   installedAt: installedAtSchema,
+  siteId: z.uuid('siteId должен быть корректным UUID').optional(),
 });
 
 export const updateEquipmentSchema = z
@@ -52,11 +53,9 @@ export const updateEquipmentSchema = z
     location: locationSchema.optional(),
     status: z.enum(EQUIPMENT_STATUSES).optional(),
     installedAt: installedAtSchema.optional(),
+    siteId: z.uuid('siteId должен быть корректным UUID').nullable().optional(),
   })
-  .refine(
-    (data) => Object.keys(data).length > 0,
-    'Тело запроса не может быть пустым',
-  );
+  .refine((data) => Object.keys(data).length > 0, 'Тело запроса не может быть пустым');
 
 export const equipmentIdParamSchema = idParamSchema;
 

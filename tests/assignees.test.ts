@@ -10,15 +10,20 @@ let techMemberId: string;
 
 beforeAll(async () => {
   ({ app } = await createTestApp());
+});
+
+beforeEach(async () => {
   await resetDatabase();
 
-  const eq = await request(app).post('/api/equipment').send({
-    name: 'Assignee Test Equipment',
-    type: 'turbine',
-    serialNumber: `SN-${Math.random().toString(36).slice(2, 10)}`,
-    location: { lat: 1, lon: 1 },
-    installedAt: '2020-01-01',
-  });
+  const eq = await request(app)
+    .post('/api/equipment')
+    .send({
+      name: 'Assignee Test Equipment',
+      type: 'turbine',
+      serialNumber: `SN-${Math.random().toString(36).slice(2, 10)}`,
+      location: { lat: 1, lon: 1 },
+      installedAt: '2020-01-01',
+    });
   equipmentId = eq.body.data.id;
 
   const { TechnicianModel } = await import('../src/models/technician.model.js');
@@ -36,7 +41,9 @@ beforeAll(async () => {
 afterAll(closeDatabase);
 
 async function createRequest(title = 'Assignable request') {
-  const res = await request(app).post('/api/requests').send({ equipmentId, title, priority: 'medium' });
+  const res = await request(app)
+    .post('/api/requests')
+    .send({ equipmentId, title, priority: 'medium' });
   return res.body.data.id as string;
 }
 
@@ -55,7 +62,9 @@ describe('Request assignees', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(2);
-    expect(res.body.data.find((a: { role: string }) => a.role === 'lead').technicianId).toBe(techLeadId);
+    expect(res.body.data.find((a: { role: string }) => a.role === 'lead').technicianId).toBe(
+      techLeadId,
+    );
   });
 
   it('rejects a brigade without exactly one lead (422)', async () => {

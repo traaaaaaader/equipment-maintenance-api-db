@@ -5,7 +5,12 @@ import { requestAssigneeRepository } from '../repositories/requestAssigneeReposi
 import { requestStatusHistoryRepository } from '../repositories/requestStatusHistoryRepository.js';
 import { ConflictError, NotFoundError } from '../errors/index.js';
 import { isTransitionAllowed } from './requestStatusTransitions.js';
-import type { MaintenanceRequest, RequestFilters, RequestStatus } from '../models/request.model.js';
+import {
+  OPEN_STATUSES,
+  type MaintenanceRequest,
+  type RequestFilters,
+  type RequestStatus,
+} from '../models/request.model.js';
 import type { ListParams, ListResult } from '../models/model.js';
 import type { CreateRequestDto, UpdateRequestDto } from '../validators/request.schemas.js';
 
@@ -43,24 +48,30 @@ export class RequestService {
       if (!locked) throw new NotFoundError(`Заявка ${id} не найдена`);
 
       if (!isTransitionAllowed(locked.status, nextStatus)) {
-        throw new ConflictError(
-          `Недопустимый переход статуса: ${locked.status} -> ${nextStatus}`,
-          [{ field: 'status', message: `Из статуса "${locked.status}" переход в "${nextStatus}" запрещён` }],
-        );
+        throw new ConflictError(`Недопустимый переход статуса: ${locked.status} -> ${nextStatus}`, [
+          {
+            field: 'status',
+            message: `Из статуса "${locked.status}" переход в "${nextStatus}" запрещён`,
+          },
+        ]);
       }
 
       if (nextStatus === 'in_progress') {
         const assigneeCount = await requestAssigneeRepository.countByRequestId(id, transaction);
         if (assigneeCount === 0) {
           throw new ConflictError('Нельзя перевести заявку в работу без назначенных исполнителей', [
-            { field: 'status', message: 'Сначала назначьте бригаду через POST /requests/:id/assignees' },
+            {
+              field: 'status',
+              message: 'Сначала назначьте бригаду через POST /requests/:id/assignees',
+            },
           ]);
         }
       }
 
+      const isClosing = !OPEN_STATUSES.includes(nextStatus);
       const updated = (await requestRepository.update(
         id,
-        { status: nextStatus },
+        { status: nextStatus, ...(isClosing ? { closedAt: new Date() } : {}) },
         transaction,
       )) as MaintenanceRequest;
 

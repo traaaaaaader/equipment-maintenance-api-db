@@ -33,6 +33,7 @@ export interface MaintenanceRequest {
   author?: string | null;
   createdAt: string;
   updatedAt: string;
+  closedAt: string | null;
   assignees?: RequestAssigneeDto[];
   spareParts?: RequestSparePartUsageDto[];
 }
@@ -67,6 +68,7 @@ export class MaintenanceRequestModel extends Model<
   declare author: string | null;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
+  declare closedAt: Date | null;
 
   declare assigneeLinks?: (RequestAssigneeModel & { technician?: TechnicianModel })[];
   declare partUsages?: (RequestSparePartModel & { sparePart?: SparePartModel })[];
@@ -84,6 +86,7 @@ export class MaintenanceRequestModel extends Model<
       author: this.author,
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
+      closedAt: this.closedAt ? this.closedAt.toISOString() : null,
       assignees: this.assigneeLinks?.map((link) => ({
         technicianId: link.technicianId,
         fullName: link.technician?.fullName ?? '',
@@ -120,6 +123,7 @@ MaintenanceRequestModel.init(
     author: { type: DataTypes.STRING(150), allowNull: true },
     createdAt: { type: DataTypes.DATE, allowNull: false, field: 'created_at' },
     updatedAt: { type: DataTypes.DATE, allowNull: false, field: 'updated_at' },
+    closedAt: { type: DataTypes.DATE, allowNull: true, field: 'closed_at' },
   },
   {
     sequelize,
@@ -130,5 +134,15 @@ MaintenanceRequestModel.init(
   },
 );
 
-EquipmentModel.hasMany(MaintenanceRequestModel, { foreignKey: 'equipmentId', as: 'requests' });
-MaintenanceRequestModel.belongsTo(EquipmentModel, { foreignKey: 'equipmentId', as: 'equipment' });
+EquipmentModel.hasMany(MaintenanceRequestModel, {
+  foreignKey: 'equipmentId',
+  as: 'requests',
+  onDelete: 'RESTRICT',
+  onUpdate: 'CASCADE',
+});
+MaintenanceRequestModel.belongsTo(EquipmentModel, {
+  foreignKey: 'equipmentId',
+  as: 'equipment',
+  onDelete: 'RESTRICT',
+  onUpdate: 'CASCADE',
+});

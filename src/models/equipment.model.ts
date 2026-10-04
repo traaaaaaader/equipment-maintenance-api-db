@@ -133,5 +133,15 @@ EquipmentModel.init(
   },
 );
 
-SiteModel.hasMany(EquipmentModel, { foreignKey: 'siteId', as: 'equipment' });
-EquipmentModel.belongsTo(SiteModel, { foreignKey: 'siteId', as: 'site' });
+SiteModel.hasMany(EquipmentModel, {
+  foreignKey: 'siteId',
+  as: 'equipment',
+  onDelete: 'RESTRICT',
+  onUpdate: 'CASCADE',
+});
+EquipmentModel.belongsTo(SiteModel, {
+  foreignKey: 'siteId',
+  as: 'site',
+  onDelete: 'RESTRICT',
+  onUpdate: 'CASCADE',
+});

@@ -8,6 +8,9 @@ let siteId: string;
 
 beforeAll(async () => {
   ({ app } = await createTestApp());
+});
+
+beforeEach(async () => {
   await resetDatabase();
 
   const { SiteModel } = await import('../src/models/site.model.js');
@@ -50,6 +53,10 @@ beforeAll(async () => {
     status: 'done',
     plannedAt: null,
     author: null,
+    // Заведомо позже createdAt/updatedAt, которые Sequelize проставит прямо сейчас —
+    // иначе при неудачном тайминге closedAt может оказаться на микросекунды раньше
+    // createdAt, и среднее время закрытия станет отрицательным.
+    closedAt: new Date(Date.now() + 1000),
   });
 });
 

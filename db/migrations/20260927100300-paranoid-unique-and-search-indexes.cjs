@@ -28,6 +28,17 @@ module.exports = {
     await queryInterface.removeIndex('equipment', 'equipment_name_trgm_idx');
 
     await queryInterface.removeIndex('equipment', 'equipment_serial_number_active_uk');
+
+    await queryInterface.sequelize.query(`
+      UPDATE equipment e1
+         SET serial_number = e1.serial_number || '__deleted_' || e1.id
+       WHERE e1.deleted_at IS NOT NULL
+         AND EXISTS (
+           SELECT 1 FROM equipment e2
+            WHERE e2.serial_number = e1.serial_number AND e2.id <> e1.id
+         )
+    `);
+
     await queryInterface.addConstraint('equipment', {
       fields: ['serial_number'],
       type: 'unique',

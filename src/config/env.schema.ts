@@ -48,6 +48,9 @@ export const envSchema = z.object({
   PGUSER: z.string().min(1, 'PGUSER обязателен'),
   PGPASSWORD: z.string().min(1, 'PGPASSWORD обязателен'),
 
+  APP_PGUSER: z.string().min(1, 'APP_PGUSER обязателен'),
+  APP_PGPASSWORD: z.string().min(1, 'APP_PGPASSWORD обязателен'),
+
   DB_POOL_MAX: stringToNumber(10),
   DB_POOL_MIN: stringToNumber(0),
   DB_POOL_ACQUIRE_MS: stringToNumber(30_000),

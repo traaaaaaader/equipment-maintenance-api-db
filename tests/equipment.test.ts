@@ -7,8 +7,9 @@ let app: Express;
 
 beforeAll(async () => {
   ({ app } = await createTestApp());
-  await resetDatabase();
 });
+
+beforeEach(resetDatabase);
 
 afterAll(closeDatabase);
 
@@ -43,6 +44,33 @@ describe('Equipment CRUD', () => {
     expect(res.body.data.createdAt).toBeDefined();
   });
 
+  it('accepts a valid siteId on create and links the equipment to that site', async () => {
+    const { SiteModel } = await import('../src/models/site.model.js');
+    const site = await SiteModel.create({
+      name: 'Equipment Test Site',
+      code: `SITE-${Math.random().toString(36).slice(2, 8)}`,
+      region: 'Test Region',
+      locationLat: 1,
+      locationLon: 1,
+    });
+
+    const res = await request(app)
+      .post('/api/equipment')
+      .send(sampleEquipment({ siteId: site.id }));
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.siteId).toBe(site.id);
+  });
+
+  it('rejects create with an unknown siteId with 404', async () => {
+    const res = await request(app)
+      .post('/api/equipment')
+      .send(sampleEquipment({ siteId: '00000000-0000-4000-8000-000000000000' }));
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+
   it('rejects duplicate serial number with 409', async () => {
     const payload = sampleEquipment();
     await request(app).post('/api/equipment').send(payload).expect(201);
@@ -63,14 +91,18 @@ describe('Equipment CRUD', () => {
   });
 
   it('reads, updates and lists equipment with pagination metadata', async () => {
-    const created = await request(app).post('/api/equipment').send(sampleEquipment({ name: 'Inverter Z' }));
+    const created = await request(app)
+      .post('/api/equipment')
+      .send(sampleEquipment({ name: 'Inverter Z' }));
     const id = created.body.data.id;
 
     const getRes = await request(app).get(`/api/equipment/${id}`);
     expect(getRes.status).toBe(200);
     expect(getRes.body.data.name).toBe('Inverter Z');
 
-    const patchRes = await request(app).patch(`/api/equipment/${id}`).send({ status: 'maintenance' });
+    const patchRes = await request(app)
+      .patch(`/api/equipment/${id}`)
+      .send({ status: 'maintenance' });
     expect(patchRes.status).toBe(200);
     expect(patchRes.body.data.status).toBe('maintenance');
     expect(patchRes.body.data.id).toBe(id);

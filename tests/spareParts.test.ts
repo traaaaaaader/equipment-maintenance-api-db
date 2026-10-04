@@ -9,15 +9,20 @@ let sparePartId: string;
 
 beforeAll(async () => {
   ({ app } = await createTestApp());
+});
+
+beforeEach(async () => {
   await resetDatabase();
 
-  const eq = await request(app).post('/api/equipment').send({
-    name: 'Spare Part Test Equipment',
-    type: 'turbine',
-    serialNumber: `SN-${Math.random().toString(36).slice(2, 10)}`,
-    location: { lat: 1, lon: 1 },
-    installedAt: '2020-01-01',
-  });
+  const eq = await request(app)
+    .post('/api/equipment')
+    .send({
+      name: 'Spare Part Test Equipment',
+      type: 'turbine',
+      serialNumber: `SN-${Math.random().toString(36).slice(2, 10)}`,
+      location: { lat: 1, lon: 1 },
+      installedAt: '2020-01-01',
+    });
   equipmentId = eq.body.data.id;
 
   const { SparePartModel } = await import('../src/models/sparePart.model.js');
@@ -59,7 +64,10 @@ describe('Spare part consumption', () => {
   it('accumulates quantityUsed across repeated consumption of the same part', async () => {
     const id = await createRequest();
 
-    await request(app).post(`/api/requests/${id}/spare-parts`).send({ sparePartId, quantityUsed: 1 }).expect(200);
+    await request(app)
+      .post(`/api/requests/${id}/spare-parts`)
+      .send({ sparePartId, quantityUsed: 1 })
+      .expect(200);
     const second = await request(app)
       .post(`/api/requests/${id}/spare-parts`)
       .send({ sparePartId, quantityUsed: 2 });

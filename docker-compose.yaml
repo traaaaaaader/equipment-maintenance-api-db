@@ -8,10 +8,14 @@ services:
       POSTGRES_DB: ${PGDATABASE}
       POSTGRES_USER: ${PGUSER}
       POSTGRES_PASSWORD: ${PGPASSWORD}
+      APP_PGUSER: ${APP_PGUSER}
+      APP_PGPASSWORD: ${APP_PGPASSWORD}
+      APP_DB_NAME_TEST: ${PGDATABASE_TEST}
     ports:
       - '127.0.0.1:${PGPORT:-5432}:5432'
     volumes:
       - pgdata:/var/lib/postgresql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
       interval: 5s

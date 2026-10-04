@@ -72,7 +72,10 @@ npm run build && npm start   # сборка в dist/ и запуск скомп�
 ### Развёртывание с нуля — по шагам
 
 1. `docker compose up -d db` — контейнер БД с healthcheck, ждём `healthy`
-   (`docker compose ps`).
+   (`docker compose ps`). При самой первой инициализации (пустой том) Postgres дополнительно
+   выполняет `db/init/10-create-app-runtime-role.sh`: создаёт непривилегированную роль
+   `APP_PGUSER` для рантайм-соединения API и базу `PGDATABASE_TEST` для тестов (её не создаёт
+   сам образ postgres — он поднимает только `PGDATABASE`).
 2. `npm run db:migrate` — накатывает все миграции по порядку (см. [Миграции и
    сиды](#миграции-и-сиды)).
 3. `npm run db:seed` — наполняет базу демо-данными: 3 площадки, 8 единиц оборудования (5 с
@@ -117,27 +120,28 @@ TypeScript (`npm run build`), второй — чистый рантайм-об�
 Полный список — в [`.env.example`](.env.example).
 Конфигурация читается и валидируется в `src/config/` (Zod-схема, `src/config/env.schema.ts`).
 
-| Переменная | Назначение | Значение по умолчанию |
-|---|---|---|
-| `PORT` | порт HTTP-сервера | `3000` |
-| `NODE_ENV` | режим окружения (`development` / `production` / `test`) | `development` |
-| `CORS_ORIGINS` | список разрешённых CORS-origin через запятую | `http://localhost:3000` |
-| `RATE_LIMIT_WINDOW_MS` | окно ограничения частоты запросов, мс | `60000` |
-| `RATE_LIMIT_MAX` | максимум запросов на IP за окно | `100` |
-| `WEATHER_API_URL` | адрес внешнего погодного API | `https://api.open-meteo.com/v1/forecast` |
-| `REQUEST_TIMEOUT_MS` | таймаут обращения к погодному API, мс | `5000` |
-| `WEATHER_MAX_WIND_KMH` | порог скорости ветра для пригодности окна работ | `40` |
-| `BODY_LIMIT` | максимальный размер тела запроса | `100kb` |
-| `API_KEYS` | список API-ключей через запятую (см. ниже); пусто — проверка выключена | *(пусто)* |
-| `LOG_LEVEL` | уровень логирования pino | `info` |
-| `PGHOST` | хост PostgreSQL | `localhost` |
-| `PGPORT` | порт PostgreSQL | `5432` |
-| `PGDATABASE` | имя рабочей (dev/prod) базы | `equipment_maintenance` |
-| `PGDATABASE_TEST` | имя **отдельной** базы для автотестов (`npm test`) — не пересекается с dev-данными | `equipment_maintenance_test` |
-| `PGUSER` / `PGPASSWORD` | учётные данные БД | — |
-| `DB_POOL_MAX` / `DB_POOL_MIN` | границы размера пула соединений Sequelize | `10` / `0` |
-| `DB_POOL_ACQUIRE_MS` | сколько ждать свободное соединение из пула, прежде чем упасть с ошибкой | `30000` |
-| `DB_POOL_IDLE_MS` | через сколько простаивающее соединение закрывается | `10000` |
+| Переменная                      | Назначение                                                                         | Значение по умолчанию                    |
+| ------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------- |
+| `PORT`                          | порт HTTP-сервера                                                                  | `3000`                                   |
+| `NODE_ENV`                      | режим окружения (`development` / `production` / `test`)                            | `development`                            |
+| `CORS_ORIGINS`                  | список разрешённых CORS-origin через запятую                                       | `http://localhost:3000`                  |
+| `RATE_LIMIT_WINDOW_MS`          | окно ограничения частоты запросов, мс                                              | `60000`                                  |
+| `RATE_LIMIT_MAX`                | максимум запросов на IP за окно                                                    | `100`                                    |
+| `WEATHER_API_URL`               | адрес внешнего погодного API                                                       | `https://api.open-meteo.com/v1/forecast` |
+| `REQUEST_TIMEOUT_MS`            | таймаут обращения к погодному API, мс                                              | `5000`                                   |
+| `WEATHER_MAX_WIND_KMH`          | порог скорости ветра для пригодности окна работ                                    | `40`                                     |
+| `BODY_LIMIT`                    | максимальный размер тела запроса                                                   | `100kb`                                  |
+| `API_KEYS`                      | список API-ключей через запятую (см. ниже); пусто — проверка выключена             | _(пусто)_                                |
+| `LOG_LEVEL`                     | уровень логирования pino                                                           | `info`                                   |
+| `PGHOST`                        | хост PostgreSQL                                                                    | `localhost`                              |
+| `PGPORT`                        | порт PostgreSQL                                                                    | `5432`                                   |
+| `PGDATABASE`                    | имя рабочей (dev/prod) базы                                                        | `equipment_maintenance`                  |
+| `PGDATABASE_TEST`               | имя **отдельной** базы для автотестов (`npm test`) — не пересекается с dev-данными | `equipment_maintenance_test`             |
+| `PGUSER` / `PGPASSWORD`         | привилегированная роль — только для миграций/сидов (`sequelize-cli`) и тестов      | —                                        |
+| `APP_PGUSER` / `APP_PGPASSWORD` | непривилегированная роль для рантайм-соединения API (dev/prod), без DDL            | —                                        |
+| `DB_POOL_MAX` / `DB_POOL_MIN`   | границы размера пула соединений Sequelize                                          | `10` / `0`                               |
+| `DB_POOL_ACQUIRE_MS`            | сколько ждать свободное соединение из пула, прежде чем упасть с ошибкой            | `30000`                                  |
+| `DB_POOL_IDLE_MS`               | через сколько простаивающее соединение закрывается                                 | `10000`                                  |
 
 Учётные данные БД нигде не хардкодятся — только через `process.env` в `src/config`, как и
 остальная конфигурация. `.env` в `.gitignore`, в `.env.example` — безопасные плейсхолдеры.
@@ -194,34 +198,36 @@ docs/postman/                 # экспортированная коллекц�
 
 ### Оборудование (`equipment`)
 
-| Поле | Тип | Описание |
-|---|---|---|
-| `id` | string (uuid) | генерируется сервером |
-| `siteId` | string (uuid) \| `null` | ссылка на площадку; через API не задаётся (см. ниже), только сидом/миграцией |
-| `name` | string, 3–100 символов | обязательное |
-| `type` | enum | `turbine` \| `inverter` \| `sensor` \| `substation` |
-| `serialNumber` | string | уникален в пределах системы |
-| `location` | `{ lat: number, lon: number }` | координаты объекта |
-| `status` | enum | `operational` \| `maintenance` \| `fault` \| `decommissioned` (по умолчанию `operational`) |
-| `installedAt` | ISO-дата | не в будущем |
-| `createdAt`, `updatedAt` | ISO-дата-время | проставляются сервером |
-| `passport` | объект \| `null` \| отсутствует | технический паспорт (1:1), см. ниже; отсутствует при создании, `null` если паспорта нет |
+| Поле                     | Тип                             | Описание                                                                                   |
+| ------------------------ | ------------------------------- | ------------------------------------------------------------------------------------------ |
+| `id`                     | string (uuid)                   | генерируется сервером                                                                      |
+| `siteId`                 | string (uuid) \| `null`         | ссылка на площадку; необязательное поле при создании/обновлении (см. ниже)                 |
+| `name`                   | string, 3–100 символов          | обязательное                                                                               |
+| `type`                   | enum                            | `turbine` \| `inverter` \| `sensor` \| `substation`                                        |
+| `serialNumber`           | string                          | уникален в пределах системы                                                                |
+| `location`               | `{ lat: number, lon: number }`  | координаты объекта                                                                         |
+| `status`                 | enum                            | `operational` \| `maintenance` \| `fault` \| `decommissioned` (по умолчанию `operational`) |
+| `installedAt`            | ISO-дата                        | не в будущем                                                                               |
+| `createdAt`, `updatedAt` | ISO-дата-время                  | проставляются сервером                                                                     |
+| `passport`               | объект \| `null` \| отсутствует | технический паспорт (1:1), см. ниже; отсутствует при создании, `null` если паспорта нет    |
 
-`siteId` осознанно не выведен в схемы создания/обновления оборудования (`createEquipmentSchema`
-/ `updateEquipmentSchema`) — внешний контракт Кейса 2 не должен меняться, а отдельного
-CRUD-эндпоинта для площадок заданием не предусмотрено. Оборудование привязывается к площадке
-только при наполнении данными (сид/миграция); прямой связи «создать оборудование сразу с
-площадкой через API» в этой версии нет.
+`siteId` — необязательное поле и в `createEquipmentSchema`, и в `updateEquipmentSchema`
+(UUID; при обновлении можно явно передать `null`, чтобы отвязать оборудование от площадки).
+Значение проверяется в `equipmentService` до записи: несуществующий `siteId` — `404 NOT_FOUND`
+("Площадка ... не найдена"), а не "сырая" ошибка внешнего ключа из БД. Отдельного
+CRUD-эндпоинта для площадок всё ещё нет (площадки заводятся сидом), но привязать к площадке
+можно любое оборудование, создаваемое или редактируемое через API, а не только через
+сид/миграцию, как было раньше.
 
 ### Технический паспорт оборудования (`equipment_passports`, 1:1)
 
-| Поле | Тип | Описание |
-|---|---|---|
-| `id` | string (uuid) | генерируется сервером |
-| `equipmentId` | string (uuid) | уникален — гарантирует, что паспорт ровно один |
-| `manufacturer`, `model` | string | производитель и модель |
-| `ratedPowerKw` | number | номинальная мощность |
-| `lastInspectionAt` | ISO-дата \| `null` | дата последней поверки |
+| Поле                    | Тип                | Описание                                       |
+| ----------------------- | ------------------ | ---------------------------------------------- |
+| `id`                    | string (uuid)      | генерируется сервером                          |
+| `equipmentId`           | string (uuid)      | уникален — гарантирует, что паспорт ровно один |
+| `manufacturer`, `model` | string             | производитель и модель                         |
+| `ratedPowerKw`          | number             | номинальная мощность                           |
+| `lastInspectionAt`      | ISO-дата \| `null` | дата последней поверки                         |
 
 Наличие паспорта необязательно: в демо-данных 5 из 8 единиц оборудования имеют паспорт, 3 —
 нет, специально чтобы показать необязательность связи 1:1. Отдельного CRUD-эндпоинта для
@@ -229,18 +235,19 @@ CRUD-эндпоинта для площадок заданием не преду
 
 ### Заявка на обслуживание (`maintenance_requests`)
 
-| Поле | Тип | Описание |
-|---|---|---|
-| `id` | string (uuid) | генерируется сервером |
-| `equipmentId` | string | ссылка на существующее оборудование |
-| `title` | string, 5–120 символов | обязательное |
-| `description` | string, до 2000 символов | необязательное |
-| `priority` | enum | `low` \| `medium` \| `high` \| `critical` |
-| `status` | enum | `new` \| `in_progress` \| `done` \| `rejected` (по умолчанию `new`) |
-| `plannedAt` | ISO-дата-время | необязательное |
-| `createdAt`, `updatedAt` | ISO-дата-время | проставляются сервером |
-| `assignees` | массив \| отсутствует | назначенная бригада (N:M через `request_assignees`), см. ниже |
-| `spareParts` | массив \| отсутствует | списанные запчасти (N:M через `request_spare_parts`), см. ниже |
+| Поле                     | Тип                      | Описание                                                                                                                                                  |
+| ------------------------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                     | string (uuid)            | генерируется сервером                                                                                                                                     |
+| `equipmentId`            | string                   | ссылка на существующее оборудование                                                                                                                       |
+| `title`                  | string, 5–120 символов   | обязательное                                                                                                                                              |
+| `description`            | string, до 2000 символов | необязательное                                                                                                                                            |
+| `priority`               | enum                     | `low` \| `medium` \| `high` \| `critical`                                                                                                                 |
+| `status`                 | enum                     | `new` \| `in_progress` \| `done` \| `rejected` (по умолчанию `new`)                                                                                       |
+| `plannedAt`              | ISO-дата-время           | необязательное                                                                                                                                            |
+| `createdAt`, `updatedAt` | ISO-дата-время           | проставляются сервером                                                                                                                                    |
+| `closedAt`               | ISO-дата-время \| `null` | момент перехода в терминальный статус (`done`/`rejected`); проставляется сервером при смене статуса, не меняется последующим редактированием полей заявки |
+| `assignees`              | массив \| отсутствует    | назначенная бригада (N:M через `request_assignees`), см. ниже                                                                                             |
+| `spareParts`             | массив \| отсутствует    | списанные запчасти (N:M через `request_spare_parts`), см. ниже                                                                                            |
 
 Поля `id`, `createdAt`, `updatedAt` (а также `status` при создании) проставляются сервером и
 не могут быть изменены клиентом напрямую: валидационные схемы построены так, что тело запроса
@@ -250,65 +257,65 @@ CRUD-эндпоинта для площадок заданием не преду
 
 ### Площадка (`sites`, 1:N к оборудованию)
 
-| Поле | Тип | Описание |
-|---|---|---|
-| `id` | string (uuid) | генерируется сервером |
-| `name`, `region` | string | название и регион |
-| `code` | string | уникальный код площадки |
-| `location` | `{ lat: number, lon: number }` | координаты площадки |
+| Поле             | Тип                            | Описание                |
+| ---------------- | ------------------------------ | ----------------------- |
+| `id`             | string (uuid)                  | генерируется сервером   |
+| `name`, `region` | string                         | название и регион       |
+| `code`           | string                         | уникальный код площадки |
+| `location`       | `{ lat: number, lon: number }` | координаты площадки     |
 
 CRUD-эндпоинта для площадок заданием не предусмотрен — только чтение сводки
 (`GET /api/sites/:id/summary`). Площадки заводятся сидом.
 
 ### Специалист (`technicians`)
 
-| Поле | Тип | Описание |
-|---|---|---|
-| `id` | string (uuid) | генерируется сервером |
-| `fullName` | string | ФИО |
-| `specialization` | string | специализация |
-| `badgeNumber` | string | уникальный табельный номер |
+| Поле             | Тип           | Описание                   |
+| ---------------- | ------------- | -------------------------- |
+| `id`             | string (uuid) | генерируется сервером      |
+| `fullName`       | string        | ФИО                        |
+| `specialization` | string        | специализация              |
+| `badgeNumber`    | string        | уникальный табельный номер |
 
 Как и у площадок, отдельного CRUD-эндпоинта нет — специалисты заводятся сидом, используются
 как ссылка при назначении бригады.
 
 ### Назначение специалиста на заявку (`request_assignees`, N:M заявка↔специалист)
 
-| Поле | Тип | Описание |
-|---|---|---|
-| `technicianId` | string (uuid) | специалист |
-| `role` | enum | `lead` \| `member` — в бригаде ровно один `lead` |
-| `plannedHours` | number, > 0 | плановые трудозатраты |
+| Поле           | Тип           | Описание                                         |
+| -------------- | ------------- | ------------------------------------------------ |
+| `technicianId` | string (uuid) | специалист                                       |
+| `role`         | enum          | `lead` \| `member` — в бригаде ровно один `lead` |
+| `plannedHours` | number, > 0   | плановые трудозатраты                            |
 
 Пара (заявка, специалист) уникальна на уровне БД — повторное назначение того же специалиста на
 ту же заявку невозможно.
 
 ### Журнал изменения статусов (`request_status_history`, 1:N к заявке)
 
-| Поле | Тип | Описание |
-|---|---|---|
-| `id` | string (uuid) | генерируется сервером |
-| `requestId` | string (uuid) | заявка |
-| `previousStatus` | enum \| `null` | статус до перехода (`null` невозможен — первая запись создаётся уже при первом переходе из `new`) |
-| `newStatus` | enum | статус после перехода |
-| `changedBy` | string \| `null` | автор изменения |
-| `comment` | string \| `null` | комментарий |
-| `createdAt` | ISO-дата-время | момент перехода; `updatedAt` у этой таблицы намеренно нет — записи неизменяемы |
+| Поле             | Тип              | Описание                                                                                          |
+| ---------------- | ---------------- | ------------------------------------------------------------------------------------------------- |
+| `id`             | string (uuid)    | генерируется сервером                                                                             |
+| `requestId`      | string (uuid)    | заявка                                                                                            |
+| `previousStatus` | enum \| `null`   | статус до перехода (`null` невозможен — первая запись создаётся уже при первом переходе из `new`) |
+| `newStatus`      | enum             | статус после перехода                                                                             |
+| `changedBy`      | string \| `null` | автор изменения                                                                                   |
+| `comment`        | string \| `null` | комментарий                                                                                       |
+| `createdAt`      | ISO-дата-время   | момент перехода; `updatedAt` у этой таблицы намеренно нет — записи неизменяемы                    |
 
 Записи журнала не редактируются и не удаляются через API — только читаются
 (`GET /api/requests/:id/history`) в хронологическом порядке.
 
 ### Запчасть и её списание (`spare_parts`, `request_spare_parts` — N:M заявка↔запчасть)
 
-| Поле (`spare_parts`) | Тип | Описание |
-|---|---|---|
-| `name`, `sku` | string | название и уникальный артикул |
-| `quantity` | integer, ≥ 0 | остаток на складе |
+| Поле (`spare_parts`) | Тип          | Описание                      |
+| -------------------- | ------------ | ----------------------------- |
+| `name`, `sku`        | string       | название и уникальный артикул |
+| `quantity`           | integer, ≥ 0 | остаток на складе             |
 
-| Поле (`request_spare_parts`) | Тип | Описание |
-|---|---|---|
-| `sparePartId` | string (uuid) | запчасть |
-| `quantityUsed` | integer, > 0 | сколько списано по этой заявке |
+| Поле (`request_spare_parts`) | Тип           | Описание                       |
+| ---------------------------- | ------------- | ------------------------------ |
+| `sparePartId`                | string (uuid) | запчасть                       |
+| `quantityUsed`               | integer, > 0  | сколько списано по этой заявке |
 
 Пара (заявка, запчасть) уникальна. Списание выполняется через
 `POST /api/requests/:id/spare-parts` (см. раздел «Состав API» и «Транзакции и конкурентный
@@ -331,15 +338,15 @@ sites ──1:N──► equipment ──1:1──► equipment_passports
 (`ON UPDATE CASCADE` везде — суррогатные `uuid`-ключи не меняются, но правило указано явно, а
 не полагается на поведение по умолчанию):
 
-| Связь | `ON DELETE` | Почему |
-|---|---|---|
-| `equipment.site_id → sites.id` | `RESTRICT` | нельзя молча потерять привязку оборудования к площадке; `site_id` при этом **nullable** — оборудование может существовать без площадки |
-| `equipment_passports.equipment_id → equipment.id` | `CASCADE` | паспорт не имеет смысла без своего оборудования |
-| `maintenance_requests.equipment_id → equipment.id` | `RESTRICT` | оборудование, у которого есть заявки (в том числе закрытые), не должно исчезать бесследно — на практике `equipment` ещё и `paranoid` (мягкое удаление), поэтому реальный `DELETE` до этой проверки обычно не доходит |
-| `request_status_history.request_id → maintenance_requests.id` | `CASCADE` | журнал бессмысленен без своей заявки |
-| `request_assignees.request_id → maintenance_requests.id` | `CASCADE` | назначения удаляются вместе с заявкой |
-| `request_assignees.technician_id → technicians.id` | `RESTRICT` | нельзя удалить специалиста, у которого есть назначения (в API удаления специалистов и нет) |
-| `request_spare_parts.*` | `CASCADE` от заявки, `RESTRICT` от запчасти | та же логика, что и у `request_assignees` |
+| Связь                                                         | `ON DELETE`                                 | Почему                                                                                                                                                                                                               |
+| ------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `equipment.site_id → sites.id`                                | `RESTRICT`                                  | нельзя молча потерять привязку оборудования к площадке; `site_id` при этом **nullable** — оборудование может существовать без площадки                                                                               |
+| `equipment_passports.equipment_id → equipment.id`             | `CASCADE`                                   | паспорт не имеет смысла без своего оборудования                                                                                                                                                                      |
+| `maintenance_requests.equipment_id → equipment.id`            | `RESTRICT`                                  | оборудование, у которого есть заявки (в том числе закрытые), не должно исчезать бесследно — на практике `equipment` ещё и `paranoid` (мягкое удаление), поэтому реальный `DELETE` до этой проверки обычно не доходит |
+| `request_status_history.request_id → maintenance_requests.id` | `CASCADE`                                   | журнал бессмысленен без своей заявки                                                                                                                                                                                 |
+| `request_assignees.request_id → maintenance_requests.id`      | `CASCADE`                                   | назначения удаляются вместе с заявкой                                                                                                                                                                                |
+| `request_assignees.technician_id → technicians.id`            | `RESTRICT`                                  | нельзя удалить специалиста, у которого есть назначения (в API удаления специалистов и нет)                                                                                                                           |
+| `request_spare_parts.*`                                       | `CASCADE` от заявки, `RESTRICT` от запчасти | та же логика, что и у `request_assignees`                                                                                                                                                                            |
 
 Оборудование (`equipment`) — `paranoid`-модель Sequelize: `DELETE /api/equipment/:id` не
 удаляет строку физически, а проставляет `deleted_at`. Благодаря этому `ON DELETE RESTRICT` на
@@ -370,12 +377,13 @@ CREATE UNIQUE INDEX equipment_serial_number_active_uk
 используется нигде. Миграции разбиты на четыре файла по смысловым блокам — так откат/повтор
 конкретного блока не задевает остальные:
 
-| Файл | Что создаёт |
-|---|---|
-| `20260927100000-create-equipment-and-requests` | `equipment`, `maintenance_requests`, `equipment_passports` — перенос Кейса 2 + паспорт |
+| Файл                                                      | Что создаёт                                                                                                                                                                                                 |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `20260927100000-create-equipment-and-requests`            | `equipment`, `maintenance_requests`, `equipment_passports` — перенос Кейса 2 + паспорт                                                                                                                      |
 | `20260927100100-create-sites-technicians-and-assignments` | `sites`, колонка `equipment.site_id` (добавляется отдельно — `sites` физически не существует в момент создания `equipment` в первой миграции), `technicians`, `request_status_history`, `request_assignees` |
-| `20260927100200-create-spare-parts` | `spare_parts`, `request_spare_parts` |
-| `20260927100300-paranoid-unique-and-search-indexes` | частичный уникальный индекс на `equipment.serial_number` (совместимость `paranoid` с уникальностью) + GIN-индексы по триграммам для `?search=` |
+| `20260927100200-create-spare-parts`                       | `spare_parts`, `request_spare_parts`                                                                                                                                                                        |
+| `20260927100300-paranoid-unique-and-search-indexes`       | частичный уникальный индекс на `equipment.serial_number` (совместимость `paranoid` с уникальностью) + GIN-индексы по триграммам для `?search=`                                                              |
+| `20260927100400-add-closed-at-to-maintenance-requests`    | колонка `maintenance_requests.closed_at` — момент перехода в терминальный статус, отдельно от `updated_at`                                                                                                  |
 
 ```bash
 npm run db:migrate            # применить все миграции по порядку
@@ -385,8 +393,18 @@ npm run db:migrate:undo:all   # откатить всё — таблицы па�
 ```
 
 Каждая миграция реализует рабочий `down()`: полный цикл «применить всё → откатить всё →
-применить снова» проверен вручную и проходит без ошибок, включая пересоздание ENUM-типов
-Postgres (Sequelize подчищает их сам при `dropTable`).
+применить снова» проверен вручную и проходит без ошибок. `dropTable` в Sequelize сам по себе
+**не** удаляет связанные Postgres ENUM-типы — каждый `down()`, создавший `ENUM`-колонку, явно
+вызывает специализированный метод `queryInterface.dropEnum(enumName)` (Postgres-диалект
+Sequelize; формирует `DROP TYPE IF EXISTS "..."` сам, без ручной сборки SQL-строки) после
+`dropTable`; после `db:migrate:undo:all` в схеме не остаётся ни одного из 7 созданных
+ENUM-типов (проверено запросом к `pg_type`). Миграция
+`20260927100300-paranoid-unique-and-search-indexes` восстанавливает в `down()` обычный
+(не частичный) `UNIQUE` на `equipment.serial_number` — если за время действия частичного
+индекса один и тот же `serial_number` оказался и у мягко удалённой записи, и у новой активной
+(ровно то, что частичный индекс и должен разрешать), `down()` сперва переименовывает
+`serial_number` у конфликтующих уже удалённых записей (суффиксом `__deleted_<id>`), не трогая
+активные, и только потом добавляет ограничение — иначе `ADD CONSTRAINT UNIQUE` падает на дубле.
 
 Сиды (`npm run db:seed` / `npm run db:seed:undo`) наполняют базу данными, которых хватает,
 чтобы продемонстрировать все связи и оба отчёта: 3 площадки, 8 единиц оборудования (5 с
@@ -405,7 +423,7 @@ new ───────► in_progress ───────► done
 
 Разрешено: `new → in_progress`, `new → rejected`, `in_progress → done`, `in_progress → rejected`.
 Из `done` и `rejected` переходов нет — это терминальные статусы. Таблица переходов живёт в
-сервисном слое (`src/services/requestStatusTransitions.ts`). Недопустимый переход отклоняется 
+сервисном слое (`src/services/requestStatusTransitions.ts`). Недопустимый переход отклоняется
 с кодом `409 CONFLICT`.
 
 Дополнительное правило: перевод в `in_progress` требует хотя бы одного назначенного
@@ -420,28 +438,28 @@ new ───────► in_progress ───────► done
 
 Базовый префикс — `/api`. Все ответы — JSON.
 
-| Метод | Путь | Назначение | Auth |
-|---|---|---|---|
-| GET | `/api/health` | проверка доступности сервиса | — |
-| GET | `/api/equipment` | список оборудования: фильтры, сортировка, пагинация | — |
-| POST | `/api/equipment` | создание единицы оборудования | 🔑 |
-| GET | `/api/equipment/:id` | карточка оборудования | — |
-| PATCH | `/api/equipment/:id` | частичное обновление | 🔑 |
-| DELETE | `/api/equipment/:id` | удаление (запрещено при открытых заявках) | 🔑 |
-| GET | `/api/equipment/:id/requests` | заявки по конкретной единице оборудования | — |
-| GET | `/api/equipment/:id/weather` | прогноз погоды и пригодность окна для наружных работ | — |
-| GET | `/api/requests` | список заявок: фильтры, сортировка, пагинация | — |
-| POST | `/api/requests` | создание заявки | 🔑 |
-| GET | `/api/requests/:id` | карточка заявки | — |
-| PATCH | `/api/requests/:id` | редактирование полей заявки | 🔑 |
-| PATCH | `/api/requests/:id/status` | смена статуса с проверкой допустимости перехода и наличия бригады | 🔑 |
-| DELETE | `/api/requests/:id` | удаление заявки | 🔑 |
-| POST | `/api/requests/:id/assignees` | назначение бригады (список специалистов с ролями, одной транзакцией) | 🔑 |
-| DELETE | `/api/requests/:id/assignees/:userId` | снятие специалиста с заявки | 🔑 |
-| GET | `/api/requests/:id/history` | журнал изменений статуса заявки | — |
-| POST | `/api/requests/:id/spare-parts` | списание запчасти по заявке: атомарно уменьшает остаток и фиксирует расход | 🔑 |
-| GET | `/api/sites/:id/summary` | сводка по площадке: заявки по статусам/приоритетам, среднее время закрытия | — |
-| GET | `/api/reports/equipment-load` | аналитический отчёт по нагрузке на оборудование (raw SQL) | — |
+| Метод  | Путь                                  | Назначение                                                                 | Auth |
+| ------ | ------------------------------------- | -------------------------------------------------------------------------- | ---- |
+| GET    | `/api/health`                         | проверка доступности сервиса                                               | —    |
+| GET    | `/api/equipment`                      | список оборудования: фильтры, сортировка, пагинация                        | —    |
+| POST   | `/api/equipment`                      | создание единицы оборудования                                              | 🔑   |
+| GET    | `/api/equipment/:id`                  | карточка оборудования                                                      | —    |
+| PATCH  | `/api/equipment/:id`                  | частичное обновление                                                       | 🔑   |
+| DELETE | `/api/equipment/:id`                  | удаление (запрещено при открытых заявках)                                  | 🔑   |
+| GET    | `/api/equipment/:id/requests`         | заявки по конкретной единице оборудования                                  | —    |
+| GET    | `/api/equipment/:id/weather`          | прогноз погоды и пригодность окна для наружных работ                       | —    |
+| GET    | `/api/requests`                       | список заявок: фильтры, сортировка, пагинация                              | —    |
+| POST   | `/api/requests`                       | создание заявки                                                            | 🔑   |
+| GET    | `/api/requests/:id`                   | карточка заявки                                                            | —    |
+| PATCH  | `/api/requests/:id`                   | редактирование полей заявки                                                | 🔑   |
+| PATCH  | `/api/requests/:id/status`            | смена статуса с проверкой допустимости перехода и наличия бригады          | 🔑   |
+| DELETE | `/api/requests/:id`                   | удаление заявки                                                            | 🔑   |
+| POST   | `/api/requests/:id/assignees`         | назначение бригады (список специалистов с ролями, одной транзакцией)       | 🔑   |
+| DELETE | `/api/requests/:id/assignees/:userId` | снятие специалиста с заявки                                                | 🔑   |
+| GET    | `/api/requests/:id/history`           | журнал изменений статуса заявки                                            | —    |
+| POST   | `/api/requests/:id/spare-parts`       | списание запчасти по заявке: атомарно уменьшает остаток и фиксирует расход | 🔑   |
+| GET    | `/api/sites/:id/summary`              | сводка по площадке: заявки по статусам/приоритетам, среднее время закрытия | —    |
+| GET    | `/api/reports/equipment-load`         | аналитический отчёт по нагрузке на оборудование (raw SQL)                  | —    |
 
 🔑 — требует заголовок `X-API-Key`, если на сервере задана переменная `API_KEYS` (см.
 [Аутентификация по API-ключу](#аутентификация-по-api-ключу)).
@@ -484,7 +502,7 @@ new ───────► in_progress ───────► done
 ```json
 // список
 {
-  "data": [ { "id": "…" }, { "id": "…" } ],
+  "data": [{ "id": "…" }, { "id": "…" }],
   "meta": { "total": 42, "page": 1, "limit": 20 }
 }
 ```
@@ -509,7 +527,10 @@ new ───────► in_progress ───────► done
     "code": "VALIDATION_ERROR",
     "message": "Некорректные данные запроса",
     "details": [
-      { "field": "body.priority", "message": "priority должен быть одним из: low, medium, high, critical" }
+      {
+        "field": "body.priority",
+        "message": "priority должен быть одним из: low, medium, high, critical"
+      }
     ],
     "requestId": "b1f2c3d4-1234-4a5b-9abc-1234567890ab"
   }
@@ -539,12 +560,12 @@ new ───────► in_progress ───────► done
 `src/errors/databaseErrorMapper.ts` переводит код `SQLSTATE` от Postgres (`err.parent.code` у
 Sequelize, `err.code` у голого `pg`) в тот же единый формат ответа:
 
-| SQLSTATE | Значение | HTTP |
-|---|---|---|
-| `23505` | `unique_violation` | `409 CONFLICT` |
-| `23503` | `foreign_key_violation` | `422 UNPROCESSABLE_ENTITY` |
-| `23502` | `not_null_violation` | `400 BAD_REQUEST` |
-| `23514` | `check_violation` | `422 UNPROCESSABLE_ENTITY` |
+| SQLSTATE          | Значение                                    | HTTP                                                                                                                                      |
+| ----------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `23505`           | `unique_violation`                          | `409 CONFLICT`                                                                                                                            |
+| `23503`           | `foreign_key_violation`                     | `422 UNPROCESSABLE_ENTITY`                                                                                                                |
+| `23502`           | `not_null_violation`                        | `400 BAD_REQUEST`                                                                                                                         |
+| `23514`           | `check_violation`                           | `422 UNPROCESSABLE_ENTITY`                                                                                                                |
 | `40001` / `40P01` | конфликт сериализации / взаимная блокировка | `409 CONFLICT` (в проекте не используется `SERIALIZABLE`/повторные попытки, но по чек-листу эти коды тоже не должны превращаться в `500`) |
 
 Текст самой ошибки БД (имена таблиц, колонок, ограничений) наружу никогда не уходит — только
@@ -731,10 +752,17 @@ GET /api/sites/11111111-1111-4111-8111-000000000001/summary
 (делить не на что); отсутствующие статусы/приоритеты в выборке возвращаются нулём, а не
 пропускаются, чтобы клиенту не приходилось на них проверять.
 
+Считается как `avg(closed_at - created_at)` по выделенной колонке `maintenance_requests.closed_at`,
+а не по `updated_at`: `updated_at` меняется любым `PATCH /api/requests/:id` (например, правкой
+`description` уже закрытой заявки), и среднее «время закрытия» начинало бы скакать от
+редактирования текста, не имеющего отношения к длительности обслуживания. `closed_at`
+проставляется один раз — в момент перехода в `done`/`rejected` (`requestService.changeStatus`) —
+и больше не трогается.
+
 ## Погодный сервис и пригодность окна для работ
 
 `GET /api/equipment/:id/weather` берёт координаты оборудования, обращается к внешнему
-погодному API [Open-Meteo](https://open-meteo.com/) (не требует API-ключа) и возвращает 
+погодному API [Open-Meteo](https://open-meteo.com/) (не требует API-ключа) и возвращает
 текущие погодные показатели вместе с флагом пригодности окна для наружных работ:
 
 ```json
@@ -832,7 +860,7 @@ SELECT
   count(DISTINCT mr.id)                                   AS total_requests,
   count(DISTINCT mr.id) FILTER (WHERE mr.status = 'done')  AS closed_requests,
   coalesce(sum(ra.planned_hours), 0)                       AS total_planned_hours,
-  max(mr.updated_at) FILTER (WHERE mr.status = 'done')     AS last_maintenance_at
+  max(mr.closed_at) FILTER (WHERE mr.status = 'done')      AS last_maintenance_at
 FROM equipment e
 LEFT JOIN maintenance_requests mr ON mr.equipment_id = e.id AND (период по $1/$2)
 LEFT JOIN request_assignees ra ON ra.request_id = mr.id
@@ -900,12 +928,18 @@ ORDER BY e.name
   обслуживаются одним origin, кросс-сайтовые запросы с cookie не нужны) вместе с `HttpOnly` и
   `Secure`.
 - **Пользователь БД** — учётные данные только в переменных окружения, ни в коде, ни в
-  репозитории. ⚠️ Известное упрощение: локально приложение подключается тем же пользователем
-  (`PGUSER`), которым Postgres инициализирует кластер в контейнере (`POSTGRES_USER` из
-  `docker-compose.yaml`), то есть фактически с правами суперпользователя этого инстанса. Для
-  прод-окружения правильный следующий шаг — завести отдельного пользователя с правами только
-  на `SELECT/INSERT/UPDATE/DELETE` по таблицам приложения (`GRANT ... ON ALL TABLES IN SCHEMA
-  public`), без права `CREATEDB`/`DDL`, и отдельного — для миграций.
+  репозитории. Рантайм-соединение самого API и привилегированная роль для миграций разделены:
+  `PGUSER`/`PGPASSWORD` — это `POSTGRES_USER` из `docker-compose.yaml`, которым Postgres
+  инициализирует кластер в контейнере (фактически суперпользователь этого инстанса); он
+  используется только `sequelize-cli` (миграции, сиды) и тестами (фикстурам нужен `TRUNCATE`).
+  Сам же API (`src/db/sequelize.ts`, и в `development`, и в `production`) подключается
+  отдельной ролью `APP_PGUSER`/`APP_PGPASSWORD` без `CREATEDB`/DDL-прав — только
+  `SELECT/INSERT/UPDATE/DELETE` по таблицам приложения. Эта роль и права на неё
+  (`GRANT ... ON ALL TABLES IN SCHEMA public` + `ALTER DEFAULT PRIVILEGES` — чтобы право
+  распространялось и на таблицы, которые миграции создадут позже) заводятся автоматически при
+  первой инициализации контейнера БД (`db/init/10-create-app-runtime-role.sh`, монтируется в
+  `/docker-entrypoint-initdb.d`). Проверено вживую: под `APP_PGUSER` обычный `SELECT`/`INSERT`
+  проходит, а `CREATE TABLE` и `TRUNCATE` — `permission denied`.
 
 ## Логирование
 
@@ -944,7 +978,7 @@ X-API-Key: dev-secret-key
 
 ## Тестирование
 
-77 тестов на **отдельной тестовой БД** (`PGDATABASE_TEST`, не пересекается с dev-данными) —
+79 тестов на **отдельной тестовой БД** (`PGDATABASE_TEST`, не пересекается с dev-данными) —
 как интеграционные (через HTTP, Supertest), так и репозиторные (напрямую через Sequelize-модели,
 в обход Express).
 
@@ -953,18 +987,18 @@ npm run db:migrate:test   # один раз — применить миграц�
 npm test
 ```
 
-| Файл | Что проверяет |
-|---|---|
-| `equipment.test.ts`, `requests.test.ts`, `auth.test.ts`, `misc.test.ts`, `weather.test.ts` | CRUD Кейса 2, валидация, переходы статуса (включая требование бригады), аутентификация, формат ошибок, 404, недоступность внешнего API |
-| `sites.test.ts` | сводка по площадке: счётчики, среднее время закрытия, `null` без закрытых заявок, 404, 422 |
-| `reports.test.ts` | отчёт по нагрузке: агрегаты, `minRequests`, фильтр по периоду, 422 на невалидные параметры |
-| `assignees.test.ts` | назначение/снятие бригады: ровно один `lead`, дубль в теле → 409, несуществующий специалист → 404 с откатом, повторное снятие → 404 |
-| `requestHistory.test.ts` | журнал статусов: пуст для новой заявки, фиксирует переходы по порядку, 404 |
-| `databaseErrorMapper.test.ts` | единственный настоящий unit-тест в наборе — чистая функция маппинга кодов SQLSTATE, без БД |
-| `concurrency.test.ts` | два одновременных запроса на смену статуса одной заявки — ровно один успешен, в журнале ровно одна запись перехода |
-| `spareParts.test.ts` | списание запчасти: атомарное уменьшение остатка, накопление при повторном списании, 409 при нехватке без изменения остатка, 404 |
-| `repositories/equipmentRepository.test.ts` | репозиторий оборудования напрямую, включая переиспользование серийного номера после мягкого удаления |
-| `repositories/requestAssignee.test.ts` | репозиторий назначений напрямую, включая формальный тест отката транзакции (прямое чтение из репозитория после неудачной попытки назначения подтверждает, что старая бригада не пострадала) |
+| Файл                                                                                       | Что проверяет                                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `equipment.test.ts`, `requests.test.ts`, `auth.test.ts`, `misc.test.ts`, `weather.test.ts` | CRUD Кейса 2, валидация, переходы статуса (включая требование бригады), аутентификация, формат ошибок, 404, недоступность внешнего API                                                      |
+| `sites.test.ts`                                                                            | сводка по площадке: счётчики, среднее время закрытия, `null` без закрытых заявок, 404, 422                                                                                                  |
+| `reports.test.ts`                                                                          | отчёт по нагрузке: агрегаты, `minRequests`, фильтр по периоду, 422 на невалидные параметры                                                                                                  |
+| `assignees.test.ts`                                                                        | назначение/снятие бригады: ровно один `lead`, дубль в теле → 409, несуществующий специалист → 404 с откатом, повторное снятие → 404                                                         |
+| `requestHistory.test.ts`                                                                   | журнал статусов: пуст для новой заявки, фиксирует переходы по порядку, 404                                                                                                                  |
+| `databaseErrorMapper.test.ts`                                                              | единственный настоящий unit-тест в наборе — чистая функция маппинга кодов SQLSTATE, без БД                                                                                                  |
+| `concurrency.test.ts`                                                                      | два одновременных запроса на смену статуса одной заявки — ровно один успешен, в журнале ровно одна запись перехода                                                                          |
+| `spareParts.test.ts`                                                                       | списание запчасти: атомарное уменьшение остатка, накопление при повторном списании, 409 при нехватке без изменения остатка, 404                                                             |
+| `repositories/equipmentRepository.test.ts`                                                 | репозиторий оборудования напрямую, включая переиспользование серийного номера после мягкого удаления                                                                                        |
+| `repositories/requestAssignee.test.ts`                                                     | репозиторий назначений напрямую, включая формальный тест отката транзакции (прямое чтение из репозитория после неудачной попытки назначения подтверждает, что старая бригада не пострадала) |
 
 Из всего набора только `databaseErrorMapper.test.ts` — настоящий unit-тест (чистая функция,
 никакого I/O). Остальные — интеграционные: они реально ходят в PostgreSQL, что и требуется
@@ -974,19 +1008,24 @@ npm test
 Каждый тестовый файл поднимает `createApp()` заново (`tests/helpers/createTestApp.ts`) —
 переменные окружения выставляются непосредственно перед динамическим `import('../../src/app.js')`,
 поскольку конфигурация валидируется один раз при первом импорте `src/config`; так же, через
-`NODE_ENV=test`, приложение подключается к `PGDATABASE_TEST`, а не к рабочей базе. Каждый файл
-в `beforeAll` полностью очищает БД (`tests/helpers/resetDb.ts`, `TRUNCATE ... CASCADE`) и в
-`afterAll` закрывает пул соединений (`closeDatabase`) — Jest даёт каждому тестовому файлу
-собственный модульный registry (свой инстанс `sequelize`), поэтому закрывать пул нужно в каждом
-файле отдельно, иначе после прогона остаются висящие хендлы и Jest не завершается сам.
+`NODE_ENV=test`, приложение подключается к `PGDATABASE_TEST`, а не к рабочей базе. БД
+очищается (`tests/helpers/resetDb.ts`, `TRUNCATE ... CASCADE`) в `beforeEach`, а не в
+`beforeAll` — то есть перед **каждым** тестом, а не один раз перед всем файлом: тест не может
+случайно опереться на данные, оставленные соседним тестом того же файла. Каждый `it` либо
+создаёт свои фикстуры заново в собственном `beforeEach`, либо явно заводит нужные ему сущности
+внутри себя. Файл закрывает пул соединений в `afterAll` (`closeDatabase`) — Jest даёт каждому
+тестовому файлу собственный модульный registry (свой инстанс `sequelize`), поэтому закрывать
+пул нужно в каждом файле отдельно, иначе после прогона остаются висящие хендлы и Jest не
+завершается сам. Проверено: каждый файл и даже каждый отдельный `it` (через `jest -t`) проходит
+и в полном прогоне, и запущенным в одиночку — поведение не зависит от порядка выполнения.
 
 Тестовые файлы гоняются **последовательно** (`maxWorkers: 1` в `jest.config.js`), а не
 параллельно — они делят одну живую БД, и параллельная очистка таблиц одним файлом задела бы
 данные другого. Обращение к внешнему погодному API в `tests/weather.test.ts` замокано
 (`global.fetch`), поэтому тесты детерминированы и не зависят от сети.
 
-Тесты выполняются в нативном ESM-режиме Jest (`node --experimental-vm-modules`) с транспиляцией 
-через `@swc/jest`; тайпчек тестов — отдельным конфигом `tsconfig.test.json` (основной 
+Тесты выполняются в нативном ESM-режиме Jest (`node --experimental-vm-modules`) с транспиляцией
+через `@swc/jest`; тайпчек тестов — отдельным конфигом `tsconfig.test.json` (основной
 `tsconfig.json` собирает только `src/` в `dist/`).
 
 ## Postman
@@ -1049,6 +1088,7 @@ CREATE INDEX equipment_serial_number_trgm_idx  ON equipment USING gin (serial_nu
 разница вообще проявляется:
 
 **До индекса** — `Seq Scan`, полный проход по таблице:
+
 ```
 Seq Scan on equipment  (cost=0.00..645.12 rows=4 width=122) (actual time=4.331..17.822 rows=2 loops=1)
   Filter: ((name ~~* '%5000%') OR (serial_number ~~* '%5000%'))
@@ -1057,6 +1097,7 @@ Execution Time: 17.843 ms
 ```
 
 **После индекса** — `Bitmap Heap Scan` с использованием обоих триграммных индексов:
+
 ```
 Bitmap Heap Scan on equipment  (cost=43.00..57.77 rows=4 width=122) (actual time=0.261..0.264 rows=2 loops=1)
   ->  BitmapOr
