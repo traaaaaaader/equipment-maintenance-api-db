@@ -23,6 +23,20 @@ services:
       retries: 10
       start_period: 10s
 
+  migrate:
+    build:
+      context: .
+      target: migrate
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PGHOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: 'no'
+
   api:
     build: .
     ports:
@@ -35,6 +49,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
       test:
@@ -42,11 +58,42 @@ services:
           'CMD',
           'node',
           '-e',
-          "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://localhost:3000/api/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  tls-init:
+    image: alpine/openssl:latest
+    entrypoint: ['/bin/sh', '/scripts/generate-cert.sh']
+    environment:
+      NGINX_SERVER_NAME: ${NGINX_SERVER_NAME:-localhost}
+    volumes:
+      - ./deploy/nginx/generate-cert.sh:/scripts/generate-cert.sh:ro
+      - tls-certs:/certs
+
+  nginx:
+    image: nginx:1.30-alpine
+    restart: unless-stopped
+    ports:
+      - '${HTTP_PORT:-80}:80'
+      - '${HTTPS_PORT:-443}:443'
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/errors:/etc/nginx/errors:ro
+      - tls-certs:/etc/nginx/tls:ro
+    depends_on:
+      tls-init:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--no-check-certificate', '-qO-', 'https://localhost/api/health/live']
       interval: 30s
       timeout: 5s
       retries: 3
 
 volumes:
   pgdata:
+  tls-certs:
