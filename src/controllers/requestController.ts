@@ -61,7 +61,7 @@ export async function update(req: Request, res: Response) {
 export async function changeStatus(req: Request, res: Response) {
   const { id } = req.valid.params as RequestIdParam;
   const { status } = req.valid.body as ChangeStatusDto;
-  const updated = await requestService.changeStatus(id, status);
+  const updated = await requestService.changeStatus(id, status, req.user!);
   res.json({ data: updated });
 }
 

@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import * as controller from '../controllers/requestController.js';
 import { validate } from '../middlewares/validate.js';
-import { apiKeyAuth } from '../middlewares/apiKeyAuth.js';
+import { authenticate } from '../middlewares/authenticate.js';
+import { requireRole } from '../middlewares/requireRole.js';
 import {
   listRequestSchemas,
   getRequestSchemas,
@@ -19,33 +20,35 @@ import { consumeSparePartSchemas } from '../validators/requestSparePart.schemas.
 
 export const requestsRouter = Router();
 
+requestsRouter.use(authenticate);
+
 requestsRouter.get('/', validate(listRequestSchemas), controller.list);
 
-requestsRouter.post('/', apiKeyAuth, validate(createRequestSchemas), controller.create);
+requestsRouter.post('/', requireRole('technician', 'admin'), validate(createRequestSchemas), controller.create);
 
 requestsRouter.get('/:id', validate(getRequestSchemas), controller.getOne);
 
 requestsRouter.patch(
   '/:id/status',
-  apiKeyAuth,
+  requireRole('technician', 'admin'),
   validate(statusRequestSchemas),
   controller.changeStatus,
 );
 
-requestsRouter.patch('/:id', apiKeyAuth, validate(updateRequestSchemas), controller.update);
+requestsRouter.patch('/:id', requireRole('technician', 'admin'), validate(updateRequestSchemas), controller.update);
 
-requestsRouter.delete('/:id', apiKeyAuth, validate(removeRequestSchemas), controller.remove);
+requestsRouter.delete('/:id', requireRole('admin'), validate(removeRequestSchemas), controller.remove);
 
 requestsRouter.post(
   '/:id/assignees',
-  apiKeyAuth,
+  requireRole('admin'),
   validate(assignBrigadeSchemas),
   controller.assignBrigade,
 );
 
 requestsRouter.delete(
   '/:id/assignees/:userId',
-  apiKeyAuth,
+  requireRole('admin'),
   validate(removeAssigneeSchemas),
   controller.removeAssignee,
 );
@@ -54,7 +57,7 @@ requestsRouter.get('/:id/history', validate(requestHistorySchemas), controller.l
 
 requestsRouter.post(
   '/:id/spare-parts',
-  apiKeyAuth,
+  requireRole('technician', 'admin'),
   validate(consumeSparePartSchemas),
   controller.consumeSparePart,
 );

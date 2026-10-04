@@ -5,6 +5,7 @@ import { requestAssigneeRepository } from '../repositories/requestAssigneeReposi
 import { requestStatusHistoryRepository } from '../repositories/requestStatusHistoryRepository.js';
 import { ConflictError, NotFoundError } from '../errors/index.js';
 import { isTransitionAllowed } from './requestStatusTransitions.js';
+import { assertCanChangeStatus, type Actor } from './requestAuthorization.js';
 import {
   OPEN_STATUSES,
   type MaintenanceRequest,
@@ -40,12 +41,19 @@ export class RequestService {
     return (await requestRepository.update(id, patch)) as MaintenanceRequest;
   }
 
-  async changeStatus(id: string, nextStatus: RequestStatus): Promise<MaintenanceRequest> {
+  async changeStatus(id: string, nextStatus: RequestStatus, actor: Actor): Promise<MaintenanceRequest> {
     await this.getById(id);
 
     return sequelize.transaction(async (transaction) => {
       const locked = await requestRepository.findStatusForUpdate(id, transaction);
       if (!locked) throw new NotFoundError(`Заявка ${id} не найдена`);
+
+      if (actor.role === 'technician') {
+        const isAssigned = actor.technicianId
+          ? await requestAssigneeRepository.isAssigned(id, actor.technicianId, transaction)
+          : false;
+        assertCanChangeStatus(actor, isAssigned);
+      }
 
       if (!isTransitionAllowed(locked.status, nextStatus)) {
         throw new ConflictError(`Недопустимый переход статуса: ${locked.status} -> ${nextStatus}`, [
@@ -76,7 +84,7 @@ export class RequestService {
       )) as MaintenanceRequest;
 
       await requestStatusHistoryRepository.create(
-        { requestId: id, previousStatus: locked.status, newStatus: nextStatus },
+        { requestId: id, previousStatus: locked.status, newStatus: nextStatus, changedBy: actor.id },
         transaction,
       );
 

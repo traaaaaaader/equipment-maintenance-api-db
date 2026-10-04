@@ -55,6 +55,18 @@ export class RequestAssigneeRepository {
   async countByRequestId(requestId: string, transaction?: Transaction): Promise<number> {
     return RequestAssigneeModel.count({ where: { requestId }, transaction });
   }
+
+  async isAssigned(
+    requestId: string,
+    technicianId: string,
+    transaction?: Transaction,
+  ): Promise<boolean> {
+    const count = await RequestAssigneeModel.count({
+      where: { requestId, technicianId },
+      transaction,
+    });
+    return count > 0;
+  }
 }
 
 export const requestAssigneeRepository = new RequestAssigneeRepository();

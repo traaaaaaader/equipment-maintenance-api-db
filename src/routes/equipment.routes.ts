@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import * as controller from '../controllers/equipmentController.js';
 import { validate } from '../middlewares/validate.js';
-import { apiKeyAuth } from '../middlewares/apiKeyAuth.js';
+import { authenticate } from '../middlewares/authenticate.js';
+import { requireRole } from '../middlewares/requireRole.js';
 import {
   listEquipmentSchemas,
   createEquipmentSchemas,
@@ -14,13 +15,15 @@ import {
 
 export const equipmentRouter = Router();
 
+equipmentRouter.use(authenticate);
+
 equipmentRouter.get('/', validate(listEquipmentSchemas), controller.list);
 
-equipmentRouter.post('/', apiKeyAuth, validate(createEquipmentSchemas), controller.create);
+equipmentRouter.post('/', requireRole('admin'), validate(createEquipmentSchemas), controller.create);
 
 equipmentRouter.get('/:id', validate(getEquipmentSchemas), controller.getOne);
 
-equipmentRouter.patch('/:id', apiKeyAuth, validate(updateEquipmentSchemas), controller.update);
+equipmentRouter.patch('/:id', requireRole('admin'), validate(updateEquipmentSchemas), controller.update);
 
 equipmentRouter.delete('/:id', apiKeyAuth, validate(removeEquipmentSchemas), controller.remove);
 
