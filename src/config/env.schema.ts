@@ -39,8 +39,6 @@ export const envSchema = z.object({
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
-  API_KEYS: csvToArray([]),
-
   PGHOST: z.string().default('localhost'),
   PGPORT: stringToNumber(5432),
   PGDATABASE: z.string().min(1, 'PGDATABASE обязателен'),
@@ -55,6 +53,14 @@ export const envSchema = z.object({
   DB_POOL_MIN: stringToNumber(0),
   DB_POOL_ACQUIRE_MS: stringToNumber(30_000),
   DB_POOL_IDLE_MS: stringToNumber(10_000),
+
+  AUTH_RATE_LIMIT_WINDOW_MS: stringToNumber(15 * 60_000),
+  AUTH_RATE_LIMIT_MAX: stringToNumber(10),
+
+  JWT_ACCESS_SECRET: z.string().min(16, 'JWT_ACCESS_SECRET должен быть не короче 16 символов'),
+  JWT_REFRESH_SECRET: z.string().min(16, 'JWT_REFRESH_SECRET должен быть не короче 16 символов'),
+  JWT_ACCESS_TTL_MS: stringToNumber(15 * 60_000),
+  JWT_REFRESH_TTL_MS: stringToNumber(7 * 24 * 60 * 60_000),
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -36,8 +36,6 @@ export const config = {
 
   logLevel: env.LOG_LEVEL,
 
-  apiKeys: env.API_KEYS,
-
   db: {
     host: env.PGHOST,
     port: env.PGPORT,
@@ -50,5 +48,17 @@ export const config = {
       acquire: env.DB_POOL_ACQUIRE_MS,
       idle: env.DB_POOL_IDLE_MS,
     },
+  },
+
+  authRateLimit: {
+    windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+    max: env.AUTH_RATE_LIMIT_MAX,
+  },
+
+  jwt: {
+    accessSecret: env.JWT_ACCESS_SECRET,
+    refreshSecret: env.JWT_REFRESH_SECRET,
+    accessTtlMs: env.JWT_ACCESS_TTL_MS,
+    refreshTtlMs: env.JWT_REFRESH_TTL_MS,
   },
 } as const;

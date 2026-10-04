@@ -6,12 +6,7 @@ export const logger = pino({
   serializers: {
     err: pino.stdSerializers.err,
   },
-  redact: [
-    'req.headers.authorization',
-    'req.headers["x-api-key"]',
-    'req.headers.cookie',
-    '*.password',
-  ],
+  redact: ['req.headers.authorization', 'req.headers.cookie', '*.password', '*.passwordHash'],
   ...(config.nodeEnv === 'development' && {
     transport: { target: 'pino-pretty', options: { colorize: true, translateTime: 'HH:MM:ss' } },
   }),
