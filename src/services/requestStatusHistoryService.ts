@@ -1,4 +1,4 @@
-import { MaintenanceRequestModel } from '../models/request.model.js';
+import { requestRepository } from '../repositories/requestRepository.js';
 import { requestStatusHistoryRepository } from '../repositories/requestStatusHistoryRepository.js';
 import { NotFoundError } from '../errors/index.js';
 import type { RequestStatusHistoryEntry } from '../models/requestStatusHistory.model.js';
@@ -9,8 +9,8 @@ export class RequestStatusHistoryService {
     requestId: string,
     params: { page: number; limit: number },
   ): Promise<ListResult<RequestStatusHistoryEntry>> {
-    const request = await MaintenanceRequestModel.findByPk(requestId);
-    if (!request) throw new NotFoundError(`Заявка ${requestId} не найдена`);
+    const requestExists = await requestRepository.exists(requestId);
+    if (!requestExists) throw new NotFoundError(`Заявка ${requestId} не найдена`);
 
     return requestStatusHistoryRepository.findByRequestId(requestId, params);
   }

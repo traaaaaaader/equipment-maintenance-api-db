@@ -295,7 +295,9 @@
               "listen": "test",
               "script": {
                 "type": "text/javascript",
-                "exec": ["pm.test('status is 204', function () { pm.response.to.have.status(204); });"]
+                "exec": [
+                  "pm.test('status is 204', function () { pm.response.to.have.status(204); });"
+                ]
               }
             }
           ]
@@ -627,7 +629,9 @@
               "listen": "test",
               "script": {
                 "type": "text/javascript",
-                "exec": ["pm.test('status is 204', function () { pm.response.to.have.status(204); });"]
+                "exec": [
+                  "pm.test('status is 204', function () { pm.response.to.have.status(204); });"
+                ]
               }
             }
           ]
@@ -649,7 +653,9 @@
               "listen": "test",
               "script": {
                 "type": "text/javascript",
-                "exec": ["pm.test('status is 204', function () { pm.response.to.have.status(204); });"]
+                "exec": [
+                  "pm.test('status is 204', function () { pm.response.to.have.status(204); });"
+                ]
               }
             }
           ]
@@ -801,7 +807,9 @@
               "listen": "test",
               "script": {
                 "type": "text/javascript",
-                "exec": ["pm.test('status is 422', function () { pm.response.to.have.status(422); });"]
+                "exec": [
+                  "pm.test('status is 422', function () { pm.response.to.have.status(422); });"
+                ]
               }
             }
           ]
@@ -1349,7 +1357,5 @@
       ]
     }
   ],
-  "variable": [
-    { "key": "baseUrl", "value": "http://localhost:3000" }
-  ]
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:3000" }]
 }

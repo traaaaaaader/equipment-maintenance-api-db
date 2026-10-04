@@ -92,5 +92,9 @@ module.exports = {
     await queryInterface.dropTable('technicians');
     await queryInterface.removeColumn('equipment', 'site_id');
     await queryInterface.dropTable('sites');
+
+    await queryInterface.dropEnum('enum_request_assignees_role');
+    await queryInterface.dropEnum('enum_request_status_history_new_status');
+    await queryInterface.dropEnum('enum_request_status_history_previous_status');
   },
 };

@@ -59,18 +59,26 @@ RequestAssigneeModel.init(
 MaintenanceRequestModel.hasMany(RequestAssigneeModel, {
   foreignKey: 'requestId',
   as: 'assigneeLinks',
+  onDelete: 'CASCADE',
+  onUpdate: 'CASCADE',
 });
 RequestAssigneeModel.belongsTo(MaintenanceRequestModel, {
   foreignKey: 'requestId',
   as: 'request',
+  onDelete: 'CASCADE',
+  onUpdate: 'CASCADE',
 });
 TechnicianModel.hasMany(RequestAssigneeModel, {
   foreignKey: 'technicianId',
   as: 'assigneeLinks',
+  onDelete: 'RESTRICT',
+  onUpdate: 'CASCADE',
 });
 RequestAssigneeModel.belongsTo(TechnicianModel, {
   foreignKey: 'technicianId',
   as: 'technician',
+  onDelete: 'RESTRICT',
+  onUpdate: 'CASCADE',
 });
 MaintenanceRequestModel.belongsToMany(TechnicianModel, {
   through: RequestAssigneeModel,

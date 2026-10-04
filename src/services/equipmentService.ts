@@ -1,5 +1,6 @@
 import { equipmentRepository } from '../repositories/equipmentRepository.js';
 import { requestRepository } from '../repositories/requestRepository.js';
+import { siteRepository } from '../repositories/siteRepository.js';
 import { ConflictError, NotFoundError } from '../errors/index.js';
 import type { Equipment, EquipmentFilters } from '../models/equipment.model.js';
 import type { MaintenanceRequest, RequestFilters } from '../models/request.model.js';
@@ -27,6 +28,9 @@ export class EquipmentService {
         { field: 'serialNumber', message: 'Значение должно быть уникальным' },
       ]);
     }
+    if (data.siteId) {
+      await this.assertSiteExists(data.siteId);
+    }
     return equipmentRepository.create(data);
   }
 
@@ -41,8 +45,16 @@ export class EquipmentService {
         ]);
       }
     }
+    if (patch.siteId) {
+      await this.assertSiteExists(patch.siteId);
+    }
 
     return (await equipmentRepository.update(id, patch)) as Equipment;
+  }
+
+  private async assertSiteExists(siteId: string): Promise<void> {
+    const site = await siteRepository.findById(siteId);
+    if (!site) throw new NotFoundError(`Площадка ${siteId} не найдена`);
   }
 
   async remove(id: string): Promise<void> {

@@ -9,6 +9,9 @@ let technicianId: string;
 
 beforeAll(async () => {
   ({ app } = await createTestApp());
+});
+
+beforeEach(async () => {
   await resetDatabase();
 
   const eq = await request(app)
@@ -100,6 +103,11 @@ describe('Maintenance requests', () => {
   });
 
   it('lists requests for a specific equipment via the nested resource', async () => {
+    await request(app)
+      .post('/api/requests')
+      .send({ equipmentId, title: 'Listed via nested resource', priority: 'low' })
+      .expect(201);
+
     const res = await request(app).get(`/api/equipment/${equipmentId}/requests`);
     expect(res.status).toBe(200);
     expect(res.body.data.every((r: { equipmentId: string }) => r.equipmentId === equipmentId)).toBe(

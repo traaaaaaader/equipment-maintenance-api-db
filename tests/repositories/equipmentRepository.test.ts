@@ -8,8 +8,9 @@ let equipmentRepository: EquipmentRepository;
 
 beforeAll(async () => {
   ({ equipmentRepository } = await import('../../src/repositories/equipmentRepository.js'));
-  await resetDatabase();
 });
+
+beforeEach(resetDatabase);
 
 afterAll(closeDatabase);
 
@@ -26,7 +27,7 @@ function sample(overrides: Partial<CreateEquipmentDto> = {}): CreateEquipmentDto
 }
 
 describe('EquipmentRepository', () => {
-  it('creates with siteId null by default (no API contract for assigning a site)', async () => {
+  it('creates with siteId null by default when not provided', async () => {
     const created = await equipmentRepository.create(sample());
     expect(created.siteId).toBeNull();
   });
@@ -86,7 +87,9 @@ describe('EquipmentRepository', () => {
 
     expect(await equipmentRepository.delete(original.id)).toBe(true);
 
-    const replacement = await equipmentRepository.create(sample({ serialNumber, name: 'Replacement' }));
+    const replacement = await equipmentRepository.create(
+      sample({ serialNumber, name: 'Replacement' }),
+    );
     expect(replacement.id).not.toBe(original.id);
     expect(replacement.serialNumber).toBe(serialNumber);
   });

@@ -55,5 +55,15 @@ EquipmentPassportModel.init(
   },
 );
 
-EquipmentModel.hasOne(EquipmentPassportModel, { foreignKey: 'equipmentId', as: 'passport' });
-EquipmentPassportModel.belongsTo(EquipmentModel, { foreignKey: 'equipmentId', as: 'equipment' });
+EquipmentModel.hasOne(EquipmentPassportModel, {
+  foreignKey: 'equipmentId',
+  as: 'passport',
+  onDelete: 'CASCADE',
+  onUpdate: 'CASCADE',
+});
+EquipmentPassportModel.belongsTo(EquipmentModel, {
+  foreignKey: 'equipmentId',
+  as: 'equipment',
+  onDelete: 'CASCADE',
+  onUpdate: 'CASCADE',
+});

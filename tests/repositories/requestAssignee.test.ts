@@ -23,8 +23,9 @@ beforeAll(async () => {
   ({ MaintenanceRequestModel } = await import('../../src/models/request.model.js'));
   ({ TechnicianModel } = await import('../../src/models/technician.model.js'));
   ({ sequelize } = await import('../../src/db/sequelize.js'));
-  await resetDatabase();
 });
+
+beforeEach(resetDatabase);
 
 afterAll(closeDatabase);
 

@@ -8,18 +8,23 @@ let equipmentAId: string;
 let equipmentBId: string;
 
 async function createEquipment(name: string) {
-  const res = await request(app).post('/api/equipment').send({
-    name,
-    type: 'turbine',
-    serialNumber: `SN-${Math.random().toString(36).slice(2, 10)}`,
-    location: { lat: 1, lon: 1 },
-    installedAt: '2020-01-01',
-  });
+  const res = await request(app)
+    .post('/api/equipment')
+    .send({
+      name,
+      type: 'turbine',
+      serialNumber: `SN-${Math.random().toString(36).slice(2, 10)}`,
+      location: { lat: 1, lon: 1 },
+      installedAt: '2020-01-01',
+    });
   return res.body.data.id as string;
 }
 
 beforeAll(async () => {
   ({ app } = await createTestApp());
+});
+
+beforeEach(async () => {
   await resetDatabase();
 
   equipmentAId = await createEquipment('Load Report A');
@@ -64,7 +69,10 @@ describe('Equipment load report', () => {
       '/api/reports/equipment-load?dateFrom=2000-01-01T00:00:00Z&dateTo=2000-01-02T00:00:00Z',
     );
     expect(res.status).toBe(200);
-    expect(res.body.data.find((r: { equipmentId: string }) => r.equipmentId === equipmentAId).totalRequests).toBe(0);
+    expect(
+      res.body.data.find((r: { equipmentId: string }) => r.equipmentId === equipmentAId)
+        .totalRequests,
+    ).toBe(0);
   });
 
   it('rejects a negative minRequests', async () => {

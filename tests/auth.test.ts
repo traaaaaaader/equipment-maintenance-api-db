@@ -7,8 +7,9 @@ let app: Express;
 
 beforeAll(async () => {
   ({ app } = await createTestApp({ apiKeys: 'secret-1,secret-2' }));
-  await resetDatabase();
 });
+
+beforeEach(resetDatabase);
 
 afterAll(closeDatabase);
 
@@ -33,7 +34,10 @@ describe('API key authentication', () => {
   });
 
   it('accepts a valid API key', async () => {
-    const res = await request(app).post('/api/equipment').set('X-API-Key', 'secret-1').send(payload);
+    const res = await request(app)
+      .post('/api/equipment')
+      .set('X-API-Key', 'secret-1')
+      .send(payload);
     expect(res.status).toBe(201);
   });
 

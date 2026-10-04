@@ -79,8 +79,12 @@ RequestStatusHistoryModel.init(
 MaintenanceRequestModel.hasMany(RequestStatusHistoryModel, {
   foreignKey: 'requestId',
   as: 'statusHistory',
+  onDelete: 'CASCADE',
+  onUpdate: 'CASCADE',
 });
 RequestStatusHistoryModel.belongsTo(MaintenanceRequestModel, {
   foreignKey: 'requestId',
   as: 'request',
+  onDelete: 'CASCADE',
+  onUpdate: 'CASCADE',
 });

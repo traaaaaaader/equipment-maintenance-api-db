@@ -37,10 +37,11 @@ export class SiteRepository {
     );
 
     const [closeTimeRow] = await sequelize.query<{ avg_seconds: number | null }>(
-      `SELECT avg(extract(epoch FROM (mr.updated_at - mr.created_at)))::float AS avg_seconds
+      `SELECT avg(extract(epoch FROM (mr.closed_at - mr.created_at)))::float AS avg_seconds
          FROM maintenance_requests mr
          JOIN equipment e ON e.id = mr.equipment_id
-        WHERE e.site_id = $1 AND e.deleted_at IS NULL AND mr.status = 'done'`,
+        WHERE e.site_id = $1 AND e.deleted_at IS NULL AND mr.status = 'done'
+          AND mr.closed_at IS NOT NULL`,
       { bind: [siteId], type: QueryTypes.SELECT },
     );
 

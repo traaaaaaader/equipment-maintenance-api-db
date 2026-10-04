@@ -10,16 +10,21 @@ let originalFetch: typeof fetch;
 
 beforeAll(async () => {
   ({ app } = await createTestApp());
-  await resetDatabase();
   originalFetch = global.fetch;
+});
 
-  const eq = await request(app).post('/api/equipment').send({
-    name: 'Turbine Weather',
-    type: 'turbine',
-    serialNumber: `SN-${Math.random().toString(36).slice(2, 10)}`,
-    location: { lat: 55, lon: 37 },
-    installedAt: '2022-01-01',
-  });
+beforeEach(async () => {
+  await resetDatabase();
+
+  const eq = await request(app)
+    .post('/api/equipment')
+    .send({
+      name: 'Turbine Weather',
+      type: 'turbine',
+      serialNumber: `SN-${Math.random().toString(36).slice(2, 10)}`,
+      location: { lat: 55, lon: 37 },
+      installedAt: '2022-01-01',
+    });
   equipmentId = eq.body.data.id;
 });
 
@@ -72,7 +77,9 @@ describe('Equipment weather endpoint', () => {
   });
 
   it('returns 404 when the equipment does not exist', async () => {
-    const res = await request(app).get('/api/equipment/00000000-0000-0000-0000-000000000000/weather');
+    const res = await request(app).get(
+      '/api/equipment/00000000-0000-0000-0000-000000000000/weather',
+    );
     expect(res.status).toBe(404);
   });
 });

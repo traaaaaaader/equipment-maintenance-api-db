@@ -867,6 +867,7 @@ requestSpecs.forEach((spec, idx) => {
     author: spec.author ?? null,
     created_at: createdAt,
     updated_at: updatedAt,
+    closed_at: currentStatus === 'done' || currentStatus === 'rejected' ? updatedAt : null,
   });
 
   const assignedAt = inProgressAt ?? createdAt;

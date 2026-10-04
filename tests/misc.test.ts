@@ -7,8 +7,9 @@ let app: Express;
 
 beforeAll(async () => {
   ({ app } = await createTestApp());
-  await resetDatabase();
 });
+
+beforeEach(resetDatabase);
 
 afterAll(closeDatabase);
 

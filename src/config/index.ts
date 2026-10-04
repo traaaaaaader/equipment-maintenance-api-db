@@ -42,8 +42,8 @@ export const config = {
     host: env.PGHOST,
     port: env.PGPORT,
     database: env.NODE_ENV === 'test' && env.PGDATABASE_TEST ? env.PGDATABASE_TEST : env.PGDATABASE,
-    user: env.PGUSER,
-    password: env.PGPASSWORD,
+    user: env.NODE_ENV === 'test' ? env.PGUSER : env.APP_PGUSER,
+    password: env.NODE_ENV === 'test' ? env.PGPASSWORD : env.APP_PGPASSWORD,
     pool: {
       max: env.DB_POOL_MAX,
       min: env.DB_POOL_MIN,

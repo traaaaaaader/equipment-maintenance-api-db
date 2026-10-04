@@ -9,15 +9,20 @@ let technicianId: string;
 
 beforeAll(async () => {
   ({ app } = await createTestApp());
+});
+
+beforeEach(async () => {
   await resetDatabase();
 
-  const eq = await request(app).post('/api/equipment').send({
-    name: 'Concurrency Test Equipment',
-    type: 'turbine',
-    serialNumber: `SN-${Math.random().toString(36).slice(2, 10)}`,
-    location: { lat: 1, lon: 1 },
-    installedAt: '2020-01-01',
-  });
+  const eq = await request(app)
+    .post('/api/equipment')
+    .send({
+      name: 'Concurrency Test Equipment',
+      type: 'turbine',
+      serialNumber: `SN-${Math.random().toString(36).slice(2, 10)}`,
+      location: { lat: 1, lon: 1 },
+      installedAt: '2020-01-01',
+    });
   equipmentId = eq.body.data.id;
 
   const { TechnicianModel } = await import('../src/models/technician.model.js');
