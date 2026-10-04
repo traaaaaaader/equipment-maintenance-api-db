@@ -2,6 +2,7 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import swaggerUi from 'swagger-ui-express';
 
 import { config } from './config/index.js';
 import { ForbiddenError } from './errors/index.js';
@@ -12,6 +13,7 @@ import { apiRateLimiter } from './middlewares/rateLimiter.js';
 import { notFoundHandler } from './middlewares/notFoundHandler.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { routes } from './routes/index.js';
+import { openApiDocument } from './docs/openapi.js';
 
 export function createApp(): Express {
   const app = express();
@@ -43,6 +45,13 @@ export function createApp(): Express {
 
   app.use(express.json({ limit: config.bodyLimit }));
   app.use(cookieParser());
+
+  app.use(
+    '/api/docs',
+    swaggerUi.serve,
+    swaggerUi.setup(openApiDocument, { customSiteTitle: 'Equipment Maintenance API — docs' }),
+  );
+  app.get('/api/docs.json', (_req, res) => res.json(openApiDocument));
 
   app.use('/api', routes);
 

@@ -31,6 +31,13 @@ describe('Health, 404 and error format', () => {
     });
   });
 
+  it('GET /api/docs.json serves the OpenAPI document', async () => {
+    const res = await request(app).get('/api/docs.json');
+    expect(res.status).toBe(200);
+    expect(res.body.openapi).toBe('3.0.3');
+    expect(res.body.paths['/api/auth/login']).toBeDefined();
+  });
+
   it('unknown routes return 404 in the unified error format', async () => {
     const res = await request(app).get('/api/does-not-exist');
     expect(res.status).toBe(404);
