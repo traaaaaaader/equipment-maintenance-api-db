@@ -15,6 +15,12 @@ async function main() {
     logger.info({ port: config.port, env: config.nodeEnv }, 'Server started');
   });
 
+  // Должен быть БОЛЬШЕ, чем keepalive_timeout в upstream nginx (60s, см.
+  // deploy/nginx/nginx.conf) — иначе Node закрывает простаивающее keepalive-
+  // соединение раньше, чем nginx успевает отправить в него следующий запрос,
+  // что снаружи выглядит как редкие необъяснимые 502. По умолчанию Node — 5s.
+  httpServer.keepAliveTimeout = 65_000;
+
   async function shutdown(signal: string) {
     logger.info({ signal }, 'Получен сигнал остановки, завершаю работу');
     httpServer.close(async () => {
