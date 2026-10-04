@@ -3,8 +3,10 @@ import { jest } from '@jest/globals';
 import request from 'supertest';
 import { createTestApp } from './helpers/createTestApp.js';
 import { closeDatabase, resetDatabase } from './helpers/resetDb.js';
+import { registerAndLogin, authHeader, type TestUser } from './helpers/authHelpers.js';
 
 let app: Express;
+let admin: TestUser;
 let equipmentId: string;
 let originalFetch: typeof fetch;
 
@@ -15,9 +17,11 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await resetDatabase();
+  admin = await registerAndLogin(app, 'admin');
 
   const eq = await request(app)
     .post('/api/equipment')
+    .set(authHeader(admin.token))
     .send({
       name: 'Turbine Weather',
       type: 'turbine',
@@ -47,7 +51,9 @@ describe('Equipment weather endpoint', () => {
   it('reports the location suitable when there is no rain and low wind', async () => {
     mockFetchOk({ precipitation: 0, wind_speed_10m: 5 });
 
-    const res = await request(app).get(`/api/equipment/${equipmentId}/weather`);
+    const res = await request(app)
+    	.get(`/api/equipment/${equipmentId}/weather`)
+    	.set(authHeader(admin.token));
 
     expect(res.status).toBe(200);
     expect(res.body.data.outdoorWorkWindow.suitable).toBe(true);
@@ -57,7 +63,9 @@ describe('Equipment weather endpoint', () => {
   it('reports the location unsuitable when wind exceeds the threshold', async () => {
     mockFetchOk({ precipitation: 0, wind_speed_10m: 999 });
 
-    const res = await request(app).get(`/api/equipment/${equipmentId}/weather`);
+    const res = await request(app)
+    	.get(`/api/equipment/${equipmentId}/weather`)
+     	.set(authHeader(admin.token));
 
     expect(res.status).toBe(200);
     expect(res.body.data.outdoorWorkWindow.suitable).toBe(false);
@@ -69,7 +77,9 @@ describe('Equipment weather endpoint', () => {
       .fn<() => Promise<never>>()
       .mockRejectedValue(new Error('network down')) as unknown as typeof fetch;
 
-    const res = await request(app).get(`/api/equipment/${equipmentId}/weather`);
+    const res = await request(app)
+    	.get(`/api/equipment/${equipmentId}/weather`)
+    	.set(authHeader(admin.token));
 
     expect(res.status).toBe(503);
     expect(res.body.error.code).toBe('SERVICE_UNAVAILABLE');
@@ -77,9 +87,9 @@ describe('Equipment weather endpoint', () => {
   });
 
   it('returns 404 when the equipment does not exist', async () => {
-    const res = await request(app).get(
-      '/api/equipment/00000000-0000-0000-0000-000000000000/weather',
-    );
+    const res = await request(app)
+    	.get('/api/equipment/00000000-0000-0000-0000-000000000000/weather')
+     	.set(authHeader(admin.token));
     expect(res.status).toBe(404);
   });
 });

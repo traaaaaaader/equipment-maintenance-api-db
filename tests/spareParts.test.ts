@@ -2,8 +2,10 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { createTestApp } from './helpers/createTestApp.js';
 import { closeDatabase, resetDatabase } from './helpers/resetDb.js';
+import { registerAndLogin, authHeader, type TestUser } from './helpers/authHelpers.js';
 
 let app: Express;
+let admin: TestUser;
 let equipmentId: string;
 let sparePartId: string;
 
@@ -13,9 +15,11 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await resetDatabase();
+  admin = await registerAndLogin(app, 'admin');
 
   const eq = await request(app)
     .post('/api/equipment')
+    .set(authHeader(admin.token))
     .send({
       name: 'Spare Part Test Equipment',
       type: 'turbine',
@@ -39,16 +43,18 @@ afterAll(closeDatabase);
 async function createRequest() {
   const res = await request(app)
     .post('/api/requests')
+    .set(authHeader(admin.token))
     .send({ equipmentId, title: 'Spare part usage', priority: 'low' });
   return res.body.data.id as string;
 }
 
-describe('Spare part consumption', () => {
+describe('Spare part consumption (technician admin)', () => {
   it('decrements stock atomically and records usage on the request', async () => {
     const id = await createRequest();
 
     const res = await request(app)
       .post(`/api/requests/${id}/spare-parts`)
+      .set(authHeader(admin.token))
       .send({ sparePartId, quantityUsed: 3 });
 
     expect(res.status).toBe(200);
@@ -66,10 +72,12 @@ describe('Spare part consumption', () => {
 
     await request(app)
       .post(`/api/requests/${id}/spare-parts`)
+      .set(authHeader(admin.token))
       .send({ sparePartId, quantityUsed: 1 })
       .expect(200);
     const second = await request(app)
       .post(`/api/requests/${id}/spare-parts`)
+      .set(authHeader(admin.token))
       .send({ sparePartId, quantityUsed: 2 });
 
     expect(second.body.data.spareParts).toEqual([
@@ -84,6 +92,7 @@ describe('Spare part consumption', () => {
 
     const res = await request(app)
       .post(`/api/requests/${id}/spare-parts`)
+      .set(authHeader(admin.token))
       .send({ sparePartId, quantityUsed: before + 1 });
 
     expect(res.status).toBe(409);
@@ -98,6 +107,7 @@ describe('Spare part consumption', () => {
 
     const res = await request(app)
       .post(`/api/requests/${id}/spare-parts`)
+      .set(authHeader(admin.token))
       .send({ sparePartId: '00000000-0000-0000-0000-000000000000', quantityUsed: 1 });
 
     expect(res.status).toBe(404);
@@ -106,8 +116,21 @@ describe('Spare part consumption', () => {
   it('returns 404 for an unknown request', async () => {
     const res = await request(app)
       .post('/api/requests/00000000-0000-0000-0000-000000000000/spare-parts')
+      .set(authHeader(admin.token))
       .send({ sparePartId, quantityUsed: 1 });
 
     expect(res.status).toBe(404);
+  });
+
+  it('403s for a viewer (not allowed to consume spare parts)', async () => {
+    const viewer = await registerAndLogin(app, 'viewer');
+    const id = await createRequest();
+
+    const res = await request(app)
+      .post(`/api/requests/${id}/spare-parts`)
+      .set(authHeader(viewer.token))
+      .send({ sparePartId, quantityUsed: 1 });
+
+    expect(res.status).toBe(403);
   });
 });

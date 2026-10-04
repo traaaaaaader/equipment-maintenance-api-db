@@ -1,6 +1,7 @@
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 
 import { config } from './config/index.js';
 import { ForbiddenError } from './errors/index.js';
@@ -41,6 +42,7 @@ export function createApp(): Express {
   app.use('/api', apiRateLimiter);
 
   app.use(express.json({ limit: config.bodyLimit }));
+  app.use(cookieParser());
 
   app.use('/api', routes);
 

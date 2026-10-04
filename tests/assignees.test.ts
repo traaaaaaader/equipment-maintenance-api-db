@@ -2,8 +2,10 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { createTestApp } from './helpers/createTestApp.js';
 import { closeDatabase, resetDatabase } from './helpers/resetDb.js';
+import { registerAndLogin, authHeader, type TestUser } from './helpers/authHelpers.js';
 
 let app: Express;
+let admin: TestUser;
 let equipmentId: string;
 let techLeadId: string;
 let techMemberId: string;
@@ -14,9 +16,11 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await resetDatabase();
+  admin = await registerAndLogin(app, 'admin');
 
   const eq = await request(app)
     .post('/api/equipment')
+    .set(authHeader(admin.token))
     .send({
       name: 'Assignee Test Equipment',
       type: 'turbine',
@@ -43,16 +47,18 @@ afterAll(closeDatabase);
 async function createRequest(title = 'Assignable request') {
   const res = await request(app)
     .post('/api/requests')
+    .set(authHeader(admin.token))
     .send({ equipmentId, title, priority: 'medium' });
   return res.body.data.id as string;
 }
 
-describe('Request assignees', () => {
+describe('Request assignees (admin)', () => {
   it('assigns a brigade with exactly one lead', async () => {
     const id = await createRequest();
 
     const res = await request(app)
       .post(`/api/requests/${id}/assignees`)
+      .set(authHeader(admin.token))
       .send({
         assignees: [
           { technicianId: techLeadId, role: 'lead', plannedHours: 5 },
@@ -72,6 +78,7 @@ describe('Request assignees', () => {
 
     const res = await request(app)
       .post(`/api/requests/${id}/assignees`)
+      .set(authHeader(admin.token))
       .send({ assignees: [{ technicianId: techMemberId, role: 'member', plannedHours: 3 }] });
 
     expect(res.status).toBe(422);
@@ -82,6 +89,7 @@ describe('Request assignees', () => {
 
     const res = await request(app)
       .post(`/api/requests/${id}/assignees`)
+      .set(authHeader(admin.token))
       .send({
         assignees: [
           { technicianId: techLeadId, role: 'lead', plannedHours: 5 },
@@ -97,6 +105,7 @@ describe('Request assignees', () => {
 
     const res = await request(app)
       .post(`/api/requests/${id}/assignees`)
+      .set(authHeader(admin.token))
       .send({
         assignees: [
           { technicianId: techLeadId, role: 'lead', plannedHours: 5 },
@@ -112,11 +121,13 @@ describe('Request assignees', () => {
 
     await request(app)
       .post(`/api/requests/${id}/assignees`)
+      .set(authHeader(admin.token))
       .send({ assignees: [{ technicianId: techLeadId, role: 'lead', plannedHours: 5 }] })
       .expect(200);
 
     const failed = await request(app)
       .post(`/api/requests/${id}/assignees`)
+      .set(authHeader(admin.token))
       .send({
         assignees: [
           { technicianId: techLeadId, role: 'lead', plannedHours: 5 },
@@ -125,7 +136,7 @@ describe('Request assignees', () => {
       });
     expect(failed.status).toBe(404);
 
-    const card = await request(app).get(`/api/requests/${id}`);
+    const card = await request(app).get(`/api/requests/${id}`).set(authHeader(admin.token));
     expect(card.body.data.assignees).toHaveLength(1);
     expect(card.body.data.assignees[0].technicianId).toBe(techLeadId);
   });
@@ -135,19 +146,21 @@ describe('Request assignees', () => {
 
     await request(app)
       .post(`/api/requests/${id}/assignees`)
+      .set(authHeader(admin.token))
       .send({ assignees: [{ technicianId: techLeadId, role: 'lead', plannedHours: 5 }] })
       .expect(200);
 
-    const del = await request(app).delete(`/api/requests/${id}/assignees/${techLeadId}`);
+    const del = await request(app).delete(`/api/requests/${id}/assignees/${techLeadId}`).set(authHeader(admin.token));;
     expect(del.status).toBe(204);
 
-    const delAgain = await request(app).delete(`/api/requests/${id}/assignees/${techLeadId}`);
+    const delAgain = await request(app).delete(`/api/requests/${id}/assignees/${techLeadId}`).set(authHeader(admin.token));;
     expect(delAgain.status).toBe(404);
   });
 
   it('404s when assigning to a non-existent request', async () => {
     const res = await request(app)
       .post('/api/requests/00000000-0000-4000-8000-000000000000/assignees')
+      .set(authHeader(admin.token));
       .send({ assignees: [{ technicianId: techLeadId, role: 'lead', plannedHours: 5 }] });
 
     expect(res.status).toBe(404);

@@ -3,6 +3,8 @@ export async function resetDatabase(): Promise<void> {
 
   await sequelize.query(`
     TRUNCATE TABLE
+	    refresh_tokens,
+	    users,
       request_spare_parts,
       request_assignees,
       request_status_history,

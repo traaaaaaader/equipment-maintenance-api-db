@@ -2,8 +2,10 @@ import type { Express } from 'express';
 import request from 'supertest';
 import { createTestApp } from './helpers/createTestApp.js';
 import { closeDatabase, resetDatabase } from './helpers/resetDb.js';
+import { registerAndLogin, authHeader, type TestUser } from './helpers/authHelpers.js';
 
 let app: Express;
+let admin: TestUser;
 let siteId: string;
 
 beforeAll(async () => {
@@ -12,6 +14,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await resetDatabase();
+  admin = await registerAndLogin(app, 'admin');
 
   const { SiteModel } = await import('../src/models/site.model.js');
   const { EquipmentModel } = await import('../src/models/equipment.model.js');
@@ -64,7 +67,9 @@ afterAll(closeDatabase);
 
 describe('Site summary', () => {
   it('returns counts by status and priority for its equipment', async () => {
-    const res = await request(app).get(`/api/sites/${siteId}/summary`);
+    const res = await request(app)
+    	.get(`/api/sites/${siteId}/summary`)
+    	.set(authHeader(admin.token));
 
     expect(res.status).toBe(200);
     expect(res.body.data.siteId).toBe(siteId);
@@ -74,7 +79,9 @@ describe('Site summary', () => {
   });
 
   it('computes a non-negative average close time when there is a done request', async () => {
-    const res = await request(app).get(`/api/sites/${siteId}/summary`);
+    const res = await request(app)
+    	.get(`/api/sites/${siteId}/summary`)
+    	.set(authHeader(admin.token));
     expect(typeof res.body.data.averageCloseTimeHours).toBe('number');
     expect(res.body.data.averageCloseTimeHours).toBeGreaterThanOrEqual(0);
   });
@@ -89,20 +96,26 @@ describe('Site summary', () => {
       locationLon: 0,
     });
 
-    const res = await request(app).get(`/api/sites/${emptySite.id}/summary`);
+    const res = await request(app)
+    	.get(`/api/sites/${emptySite.id}/summary`)
+    	.set(authHeader(admin.token));
     expect(res.status).toBe(200);
     expect(res.body.data.totalRequests).toBe(0);
     expect(res.body.data.averageCloseTimeHours).toBeNull();
   });
 
   it('returns 404 for an unknown site', async () => {
-    const res = await request(app).get('/api/sites/00000000-0000-4000-8000-000000000000/summary');
+    const res = await request(app)
+    	.get('/api/sites/00000000-0000-4000-8000-000000000000/summary')
+    	.set(authHeader(admin.token));
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('NOT_FOUND');
   });
 
   it('returns 422 for a malformed id', async () => {
-    const res = await request(app).get('/api/sites/not-a-uuid/summary');
+    const res = await request(app)
+    	.get('/api/sites/not-a-uuid/summary')
+    	.set(authHeader(admin.token));
     expect(res.status).toBe(422);
   });
 });
