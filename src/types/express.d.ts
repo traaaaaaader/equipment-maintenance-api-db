@@ -7,6 +7,11 @@ declare global {
         query: unknown;
         body: unknown;
       };
+      user?: {
+        id: string;
+        role: Role;
+        technicianId: string | null;
+      };
     }
   }
 }
