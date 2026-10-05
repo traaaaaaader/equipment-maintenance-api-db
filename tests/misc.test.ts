@@ -14,7 +14,7 @@ beforeEach(resetDatabase);
 afterAll(closeDatabase);
 
 describe('Health, 404 and error format', () => {
-	it('GET /api/health/live returns ok without touching the database', async () => {
+  it('GET /api/health/live returns ok without touching the database', async () => {
     const res = await request(app).get('/api/health/live');
     expect(res.status).toBe(200);
     expect(res.body.data.status).toBe('ok');

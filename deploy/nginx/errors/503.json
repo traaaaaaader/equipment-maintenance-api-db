@@ -1,1 +1,7 @@
-{"error":{"code":"SERVICE_UNAVAILABLE","message":"Сервис временно недоступен. Повторите запрос позже.","requestId":null}}
+{
+  "error": {
+    "code": "SERVICE_UNAVAILABLE",
+    "message": "Сервис временно недоступен. Повторите запрос позже.",
+    "requestId": null
+  }
+}

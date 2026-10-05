@@ -56,13 +56,13 @@ describe('Concurrent status change on the same request', () => {
 
     const [first, second] = await Promise.all([
       request(app)
-      	.patch(`/api/requests/${id}/status`)
+        .patch(`/api/requests/${id}/status`)
         .set(authHeader(admin.token))
         .send({ status: 'in_progress' }),
       request(app)
-      	.patch(`/api/requests/${id}/status`)
-       	.set(authHeader(admin.token))
-       	.send({ status: 'in_progress' }),
+        .patch(`/api/requests/${id}/status`)
+        .set(authHeader(admin.token))
+        .send({ status: 'in_progress' }),
     ]);
 
     const statuses = [first.status, second.status].sort();
@@ -75,8 +75,8 @@ describe('Concurrent status change on the same request', () => {
     expect(loser.body.error.code).toBe('CONFLICT');
 
     const history = await request(app)
-    	.get(`/api/requests/${id}/history`)
-     	.set(authHeader(admin.token));
+      .get(`/api/requests/${id}/history`)
+      .set(authHeader(admin.token));
     expect(history.body.meta.total).toBe(1);
     expect(history.body.data[0]).toMatchObject({ previousStatus: 'new', newStatus: 'in_progress' });
   });

@@ -67,9 +67,7 @@ afterAll(closeDatabase);
 
 describe('Site summary', () => {
   it('returns counts by status and priority for its equipment', async () => {
-    const res = await request(app)
-    	.get(`/api/sites/${siteId}/summary`)
-    	.set(authHeader(admin.token));
+    const res = await request(app).get(`/api/sites/${siteId}/summary`).set(authHeader(admin.token));
 
     expect(res.status).toBe(200);
     expect(res.body.data.siteId).toBe(siteId);
@@ -79,9 +77,7 @@ describe('Site summary', () => {
   });
 
   it('computes a non-negative average close time when there is a done request', async () => {
-    const res = await request(app)
-    	.get(`/api/sites/${siteId}/summary`)
-    	.set(authHeader(admin.token));
+    const res = await request(app).get(`/api/sites/${siteId}/summary`).set(authHeader(admin.token));
     expect(typeof res.body.data.averageCloseTimeHours).toBe('number');
     expect(res.body.data.averageCloseTimeHours).toBeGreaterThanOrEqual(0);
   });
@@ -97,8 +93,8 @@ describe('Site summary', () => {
     });
 
     const res = await request(app)
-    	.get(`/api/sites/${emptySite.id}/summary`)
-    	.set(authHeader(admin.token));
+      .get(`/api/sites/${emptySite.id}/summary`)
+      .set(authHeader(admin.token));
     expect(res.status).toBe(200);
     expect(res.body.data.totalRequests).toBe(0);
     expect(res.body.data.averageCloseTimeHours).toBeNull();
@@ -106,16 +102,16 @@ describe('Site summary', () => {
 
   it('returns 404 for an unknown site', async () => {
     const res = await request(app)
-    	.get('/api/sites/00000000-0000-4000-8000-000000000000/summary')
-    	.set(authHeader(admin.token));
+      .get('/api/sites/00000000-0000-4000-8000-000000000000/summary')
+      .set(authHeader(admin.token));
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('NOT_FOUND');
   });
 
   it('returns 422 for a malformed id', async () => {
     const res = await request(app)
-    	.get('/api/sites/not-a-uuid/summary')
-    	.set(authHeader(admin.token));
+      .get('/api/sites/not-a-uuid/summary')
+      .set(authHeader(admin.token));
     expect(res.status).toBe(422);
   });
 });

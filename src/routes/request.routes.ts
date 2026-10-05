@@ -24,7 +24,12 @@ requestsRouter.use(authenticate);
 
 requestsRouter.get('/', validate(listRequestSchemas), controller.list);
 
-requestsRouter.post('/', requireRole('technician', 'admin'), validate(createRequestSchemas), controller.create);
+requestsRouter.post(
+  '/',
+  requireRole('technician', 'admin'),
+  validate(createRequestSchemas),
+  controller.create,
+);
 
 requestsRouter.get('/:id', validate(getRequestSchemas), controller.getOne);
 
@@ -35,9 +40,19 @@ requestsRouter.patch(
   controller.changeStatus,
 );
 
-requestsRouter.patch('/:id', requireRole('technician', 'admin'), validate(updateRequestSchemas), controller.update);
+requestsRouter.patch(
+  '/:id',
+  requireRole('technician', 'admin'),
+  validate(updateRequestSchemas),
+  controller.update,
+);
 
-requestsRouter.delete('/:id', requireRole('admin'), validate(removeRequestSchemas), controller.remove);
+requestsRouter.delete(
+  '/:id',
+  requireRole('admin'),
+  validate(removeRequestSchemas),
+  controller.remove,
+);
 
 requestsRouter.post(
   '/:id/assignees',

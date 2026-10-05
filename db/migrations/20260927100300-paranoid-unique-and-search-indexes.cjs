@@ -2,7 +2,7 @@
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up(queryInterface, Sequelize) {
+  async up(queryInterface) {
     await queryInterface.removeConstraint('equipment', 'equipment_serial_number_key');
     await queryInterface.addIndex('equipment', ['serial_number'], {
       name: 'equipment_serial_number_active_uk',

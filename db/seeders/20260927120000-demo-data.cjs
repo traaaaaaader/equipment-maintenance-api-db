@@ -863,7 +863,9 @@ requestSpecs.forEach((spec, idx) => {
     priority: spec.priority,
     status: currentStatus,
     planned_at:
-      spec.plannedAfterDays != null && spec.plannedAfterDays !== null ? daysAgo(spec.createdDaysAgo - spec.plannedAfterDays) : null,
+      spec.plannedAfterDays != null && spec.plannedAfterDays !== null
+        ? daysAgo(spec.createdDaysAgo - spec.plannedAfterDays)
+        : null,
     author: spec.author ?? null,
     created_at: createdAt,
     updated_at: updatedAt,
