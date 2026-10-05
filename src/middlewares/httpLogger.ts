@@ -13,8 +13,6 @@ export const httpLogger = pinoHttp({
     return `${req.method} ${req.url} -> ${res.statusCode}`;
   },
   autoLogging: {
-    ignore: (req) =>
-	    req.url === '/api/health/live' ||
-	    req.url === '/api/health/ready',
+    ignore: (req) => req.url === '/api/health/live' || req.url === '/api/health/ready',
   },
 });

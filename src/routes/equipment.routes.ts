@@ -19,13 +19,28 @@ equipmentRouter.use(authenticate);
 
 equipmentRouter.get('/', validate(listEquipmentSchemas), controller.list);
 
-equipmentRouter.post('/', requireRole('admin'), validate(createEquipmentSchemas), controller.create);
+equipmentRouter.post(
+  '/',
+  requireRole('admin'),
+  validate(createEquipmentSchemas),
+  controller.create,
+);
 
 equipmentRouter.get('/:id', validate(getEquipmentSchemas), controller.getOne);
 
-equipmentRouter.patch('/:id', requireRole('admin'), validate(updateEquipmentSchemas), controller.update);
+equipmentRouter.patch(
+  '/:id',
+  requireRole('admin'),
+  validate(updateEquipmentSchemas),
+  controller.update,
+);
 
-equipmentRouter.delete('/:id', apiKeyAuth, validate(removeEquipmentSchemas), controller.remove);
+equipmentRouter.delete(
+  '/:id',
+  requireRole('admin'),
+  validate(removeEquipmentSchemas),
+  controller.remove,
+);
 
 equipmentRouter.get(
   '/:id/requests',

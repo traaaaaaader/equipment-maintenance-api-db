@@ -41,7 +41,11 @@ export class RequestService {
     return (await requestRepository.update(id, patch)) as MaintenanceRequest;
   }
 
-  async changeStatus(id: string, nextStatus: RequestStatus, actor: Actor): Promise<MaintenanceRequest> {
+  async changeStatus(
+    id: string,
+    nextStatus: RequestStatus,
+    actor: Actor,
+  ): Promise<MaintenanceRequest> {
     await this.getById(id);
 
     return sequelize.transaction(async (transaction) => {
@@ -84,7 +88,12 @@ export class RequestService {
       )) as MaintenanceRequest;
 
       await requestStatusHistoryRepository.create(
-        { requestId: id, previousStatus: locked.status, newStatus: nextStatus, changedBy: actor.id },
+        {
+          requestId: id,
+          previousStatus: locked.status,
+          newStatus: nextStatus,
+          changedBy: actor.id,
+        },
         transaction,
       );
 

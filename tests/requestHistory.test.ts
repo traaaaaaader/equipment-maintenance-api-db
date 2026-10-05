@@ -48,8 +48,8 @@ describe('Request status history', () => {
       .send({ equipmentId, title: 'Fresh request', priority: 'low' });
 
     const res = await request(app)
-    	.get(`/api/requests/${created.body.data.id}/history`)
-    	.set(authHeader(admin.token));
+      .get(`/api/requests/${created.body.data.id}/history`)
+      .set(authHeader(admin.token));
 
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual([]);
@@ -59,7 +59,7 @@ describe('Request status history', () => {
   it('records each status transition in chronological order, with changedBy set', async () => {
     const created = await request(app)
       .post('/api/requests')
-     	.set(authHeader(admin.token))
+      .set(authHeader(admin.token))
       .send({ equipmentId, title: 'Tracked request', priority: 'medium' });
     const id = created.body.data.id;
 
@@ -74,9 +74,10 @@ describe('Request status history', () => {
       .send({ status: 'in_progress' })
       .expect(200);
     await request(app)
-    	.patch(`/api/requests/${id}/status`)
-     	.set(authHeader(admin.token))
-     	.send({ status: 'done' }).expect(200);
+      .patch(`/api/requests/${id}/status`)
+      .set(authHeader(admin.token))
+      .send({ status: 'done' })
+      .expect(200);
 
     const res = await request(app).get(`/api/requests/${id}/history`).set(authHeader(admin.token));
 
@@ -93,8 +94,8 @@ describe('Request status history', () => {
 
   it('returns 404 for a non-existent request', async () => {
     const res = await request(app)
-    	.get('/api/requests/00000000-0000-4000-8000-000000000000/history')
-    	.set(authHeader(admin.token));
+      .get('/api/requests/00000000-0000-4000-8000-000000000000/history')
+      .set(authHeader(admin.token));
     expect(res.status).toBe(404);
   });
 });

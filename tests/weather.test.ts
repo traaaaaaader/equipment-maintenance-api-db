@@ -52,8 +52,8 @@ describe('Equipment weather endpoint', () => {
     mockFetchOk({ precipitation: 0, wind_speed_10m: 5 });
 
     const res = await request(app)
-    	.get(`/api/equipment/${equipmentId}/weather`)
-    	.set(authHeader(admin.token));
+      .get(`/api/equipment/${equipmentId}/weather`)
+      .set(authHeader(admin.token));
 
     expect(res.status).toBe(200);
     expect(res.body.data.outdoorWorkWindow.suitable).toBe(true);
@@ -64,8 +64,8 @@ describe('Equipment weather endpoint', () => {
     mockFetchOk({ precipitation: 0, wind_speed_10m: 999 });
 
     const res = await request(app)
-    	.get(`/api/equipment/${equipmentId}/weather`)
-     	.set(authHeader(admin.token));
+      .get(`/api/equipment/${equipmentId}/weather`)
+      .set(authHeader(admin.token));
 
     expect(res.status).toBe(200);
     expect(res.body.data.outdoorWorkWindow.suitable).toBe(false);
@@ -78,8 +78,8 @@ describe('Equipment weather endpoint', () => {
       .mockRejectedValue(new Error('network down')) as unknown as typeof fetch;
 
     const res = await request(app)
-    	.get(`/api/equipment/${equipmentId}/weather`)
-    	.set(authHeader(admin.token));
+      .get(`/api/equipment/${equipmentId}/weather`)
+      .set(authHeader(admin.token));
 
     expect(res.status).toBe(503);
     expect(res.body.error.code).toBe('SERVICE_UNAVAILABLE');
@@ -88,8 +88,8 @@ describe('Equipment weather endpoint', () => {
 
   it('returns 404 when the equipment does not exist', async () => {
     const res = await request(app)
-    	.get('/api/equipment/00000000-0000-0000-0000-000000000000/weather')
-     	.set(authHeader(admin.token));
+      .get('/api/equipment/00000000-0000-0000-0000-000000000000/weather')
+      .set(authHeader(admin.token));
     expect(res.status).toBe(404);
   });
 });

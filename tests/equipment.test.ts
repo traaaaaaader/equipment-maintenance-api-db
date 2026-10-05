@@ -30,7 +30,7 @@ function sampleEquipment(overrides: Record<string, unknown> = {}) {
 describe('Equipment CRUD (admin)', () => {
   it('rejects invalid payload with 422 and field details', async () => {
     const res = await request(app)
-    	.post('/api/equipment')
+      .post('/api/equipment')
       .set(authHeader(admin.token))
       .send({ name: 'X' });
 
@@ -42,9 +42,9 @@ describe('Equipment CRUD (admin)', () => {
 
   it('creates equipment and returns 201 with Location header', async () => {
     const res = await request(app)
-    	.post('/api/equipment')
-     	.set(authHeader(admin.token))
-     	.send(sampleEquipment());
+      .post('/api/equipment')
+      .set(authHeader(admin.token))
+      .send(sampleEquipment());
 
     expect(res.status).toBe(201);
     expect(res.headers.location).toBe(`/api/equipment/${res.body.data.id}`);
@@ -85,14 +85,15 @@ describe('Equipment CRUD (admin)', () => {
   it('rejects duplicate serial number with 409', async () => {
     const payload = sampleEquipment();
     await request(app)
-    	.post('/api/equipment')
-     	.set(authHeader(admin.token))
-     	.send(payload).expect(201);
+      .post('/api/equipment')
+      .set(authHeader(admin.token))
+      .send(payload)
+      .expect(201);
 
     const res = await request(app)
-    	.post('/api/equipment')
-     	.set(authHeader(admin.token))
-     	.send(payload);
+      .post('/api/equipment')
+      .set(authHeader(admin.token))
+      .send(payload);
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe('CONFLICT');
   });
@@ -128,8 +129,8 @@ describe('Equipment CRUD (admin)', () => {
     expect(patchRes.body.data.id).toBe(id);
 
     const listRes = await request(app)
-    	.get('/api/equipment?page=1&limit=5')
-     	.set(authHeader(admin.token));
+      .get('/api/equipment?page=1&limit=5')
+      .set(authHeader(admin.token));
     expect(listRes.status).toBe(200);
     expect(listRes.body.meta).toEqual(expect.objectContaining({ page: 1, limit: 5 }));
     expect(Array.isArray(listRes.body.data)).toBe(true);
@@ -137,8 +138,8 @@ describe('Equipment CRUD (admin)', () => {
 
   it('returns 404 for unknown equipment id', async () => {
     const res = await request(app)
-    	.get('/api/equipment/00000000-0000-0000-0000-000000000000')
-    	.set(authHeader(admin.token));
+      .get('/api/equipment/00000000-0000-0000-0000-000000000000')
+      .set(authHeader(admin.token));
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('NOT_FOUND');
   });
@@ -157,12 +158,12 @@ describe('Equipment CRUD (admin)', () => {
     expect(blocked.status).toBe(409);
 
     const eq2 = await request(app)
-    	.post('/api/equipment')
-     	.set(authHeader(admin.token))
-     	.send(sampleEquipment());
+      .post('/api/equipment')
+      .set(authHeader(admin.token))
+      .send(sampleEquipment());
     const deleted = await request(app)
-    	.delete(`/api/equipment/${eq2.body.data.id}`)
-     	.set(authHeader(admin.token));
+      .delete(`/api/equipment/${eq2.body.data.id}`)
+      .set(authHeader(admin.token));
     expect(deleted.status).toBe(204);
   });
 });

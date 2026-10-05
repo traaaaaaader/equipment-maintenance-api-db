@@ -63,8 +63,8 @@ describe('Equipment load report', () => {
 
   it('filters out groups below minRequests (HAVING)', async () => {
     const res = await request(app)
-    	.get('/api/reports/equipment-load?minRequests=2')
-    	.set(authHeader(admin.token));
+      .get('/api/reports/equipment-load?minRequests=2')
+      .set(authHeader(admin.token));
     expect(res.status).toBe(200);
 
     const ids = res.body.data.map((r: { equipmentId: string }) => r.equipmentId);
@@ -74,8 +74,8 @@ describe('Equipment load report', () => {
 
   it('excludes everything when the date range matches nothing', async () => {
     const res = await request(app)
-    	.get('/api/reports/equipment-load?dateFrom=2000-01-01T00:00:00Z&dateTo=2000-01-02T00:00:00Z')
-    	.set(authHeader(admin.token));
+      .get('/api/reports/equipment-load?dateFrom=2000-01-01T00:00:00Z&dateTo=2000-01-02T00:00:00Z')
+      .set(authHeader(admin.token));
     expect(res.status).toBe(200);
     expect(
       res.body.data.find((r: { equipmentId: string }) => r.equipmentId === equipmentAId)
@@ -85,15 +85,15 @@ describe('Equipment load report', () => {
 
   it('rejects a negative minRequests', async () => {
     const res = await request(app)
-    	.get('/api/reports/equipment-load?minRequests=-1')
-    	.set(authHeader(admin.token));
+      .get('/api/reports/equipment-load?minRequests=-1')
+      .set(authHeader(admin.token));
     expect(res.status).toBe(422);
   });
 
   it('rejects a malformed date', async () => {
     const res = await request(app)
-    	.get('/api/reports/equipment-load?dateFrom=not-a-date')
-    	.set(authHeader(admin.token));
+      .get('/api/reports/equipment-load?dateFrom=not-a-date')
+      .set(authHeader(admin.token));
     expect(res.status).toBe(422);
   });
 });

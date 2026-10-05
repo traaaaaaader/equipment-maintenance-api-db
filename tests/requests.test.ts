@@ -42,14 +42,11 @@ afterAll(closeDatabase);
 
 describe('Maintenance requests (admin)', () => {
   it('rejects request for non-existent equipment with 404', async () => {
-    const res = await request(app)
-    	.post('/api/requests')
-     	.set(authHeader(admin.token))
-      .send({
-	      equipmentId: '00000000-0000-0000-0000-000000000000',
-	      title: 'Ghost equipment',
-	      priority: 'low',
-	    });
+    const res = await request(app).post('/api/requests').set(authHeader(admin.token)).send({
+      equipmentId: '00000000-0000-0000-0000-000000000000',
+      title: 'Ghost equipment',
+      priority: 'low',
+    });
 
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('NOT_FOUND');
@@ -89,9 +86,9 @@ describe('Maintenance requests (admin)', () => {
     const id = created.body.data.id;
 
     const badJump = await request(app)
-    	.patch(`/api/requests/${id}/status`)
-     	.set(authHeader(admin.token))
-     	.send({ status: 'done' });
+      .patch(`/api/requests/${id}/status`)
+      .set(authHeader(admin.token))
+      .send({ status: 'done' });
     expect(badJump.status).toBe(409);
     expect(badJump.body.error.code).toBe('CONFLICT');
 
@@ -109,9 +106,9 @@ describe('Maintenance requests (admin)', () => {
     expect(toInProgress.body.data.status).toBe('in_progress');
 
     const toDone = await request(app)
-    	.patch(`/api/requests/${id}/status`)
-     	.set(authHeader(admin.token))
-     	.send({ status: 'done' });
+      .patch(`/api/requests/${id}/status`)
+      .set(authHeader(admin.token))
+      .send({ status: 'done' });
     expect(toDone.status).toBe(200);
     expect(toDone.body.data.status).toBe('done');
 
@@ -130,8 +127,8 @@ describe('Maintenance requests (admin)', () => {
       .expect(201);
 
     const res = await request(app)
-    	.get(`/api/equipment/${equipmentId}/requests`)
-     	.set(authHeader(admin.token));
+      .get(`/api/equipment/${equipmentId}/requests`)
+      .set(authHeader(admin.token));
     expect(res.status).toBe(200);
     expect(res.body.data.every((r: { equipmentId: string }) => r.equipmentId === equipmentId)).toBe(
       true,
@@ -146,13 +143,13 @@ describe('Maintenance requests (admin)', () => {
       .send({ equipmentId, title: 'Temporary request', priority: 'low' });
 
     const res = await request(app)
-    	.delete(`/api/requests/${created.body.data.id}`)
-    	.set(authHeader(admin.token));
+      .delete(`/api/requests/${created.body.data.id}`)
+      .set(authHeader(admin.token));
     expect(res.status).toBe(204);
 
     const getRes = await request(app)
-    	.get(`/api/requests/${created.body.data.id}`)
-    	.set(authHeader(admin.token));
+      .get(`/api/requests/${created.body.data.id}`)
+      .set(authHeader(admin.token));
     expect(getRes.status).toBe(404);
   });
 });
