@@ -1,23 +1,346 @@
 {
   "info": {
     "_postman_id": "3666929d-450a-4a4a-b3b8-f5d5313fd8d2",
-    "name": "CaseLab · Кейс 3 — Перенос на PostgreSQL",
-    "description": "Покрывает health, equipment, requests и новые ресурсы Кейса 3 — назначение бригады, историю статусов, сводку по площадке и отчёт по нагрузке на оборудование. Запросы сохраняют id созданных сущностей в переменные окружения и переиспользуют их дальше по коллекции, поэтому папки нужно гонять по порядку сверху вниз (Collection Runner или вручную). Перед прогоном нужна БД с накатанными миграциями и сидом (`npm run db:migrate && npm run db:seed`) — папки «Sites», «Reports» и назначение бригады в «Requests» используют id специалистов/площадки из демо-данных (`technicianId`, `technicianId2`, `siteId` в окружении), поскольку CRUD-эндпоинтов для специалистов и площадок задание не предусматривает.",
+    "name": "CaseLab · Кейс 4",
+    "description": "Покрывает health, auth, equipment, requests, назначение бригады, историю статусов, сводку по площадке, отчёт по нагрузке на оборудование и сквозной сценарий аутентификации с ролевой моделью (viewer/technician/admin). Коллекция сохраняет id созданных сущностей и access-токен в переменные окружения и переиспользует их дальше, поэтому папки нужно гонять по порядку сверху вниз, начиная с «Auth» (Collection Runner или вручную). Авторизация задана на уровне коллекции (Bearer {{accessToken}}) — запрос «Login as admin» в папке «Auth» заполняет эту переменную, отдельные публичные эндпоинты (health, register/login/refresh/logout) переопределяют её на No Auth. Перед прогоном нужна БД с накатанными миграциями и сидом (`npm run db:migrate && npm run db:seed`) — папки «Sites», «Reports» и назначение бригады в «Requests» используют id специалистов/площадки из демо-данных (`technicianId`, `technicianId2`, `siteId` в окружении), а логин — сидовые учётные записи из `db:seed` (пароль ChangeMe123!), поскольку CRUD-эндпоинтов для специалистов/площадок/пользователей задание не предусматривает.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "Health",
+      "name": "Auth",
+      "description": "Сценарии аутентификации. Прогонять первым, по порядку: «Login as admin» сохраняет access-токен в {{accessToken}} — остальные папки коллекции наследуют его через bearer-авторизацию на уровне коллекции. Refresh-токен Postman хранит сам, в cookie jar (HttpOnly-cookie с /api/auth), поэтому «Refresh» и «Logout» не требуют ручной передачи токена — достаточно прогнать «Login as admin» в этом же запуске/сессии Postman. Пароль всех сидовых аккаунтов (db:seed) — ChangeMe123!.",
       "item": [
         {
-          "name": "GET /api/health",
+          "name": "POST /api/auth/register (new viewer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{$randomEmail}}\",\n  \"name\": \"Postman Test Viewer\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('role defaults to viewer', function () {",
+                  "  pm.expect(pm.response.json().data.role).to.eql('viewer');",
+                  "});",
+                  "pm.test('response does not leak password/hash', function () {",
+                  "  const body = JSON.stringify(pm.response.json());",
+                  "  pm.expect(body).to.not.include('password');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/login (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Логин под сидовым админом (db/seeders/20260927120100-auth-accounts.cjs) — остальные папки коллекции (Equipment/Requests/Sites/Reports) рассчитаны на права admin.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('returns access token and user', function () {",
+                  "  const data = pm.response.json().data;",
+                  "  pm.expect(data.accessToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(data.user.role).to.eql('admin');",
+                  "});",
+                  "pm.test('sets refreshToken cookie with HttpOnly', function () {",
+                  "  pm.expect(pm.cookies.has('refreshToken')).to.be.true;",
+                  "});",
+                  "pm.test('response does not leak password/hash', function () {",
+                  "  const body = JSON.stringify(pm.response.json());",
+                  "  pm.expect(body).to.not.include('password');",
+                  "});",
+                  "pm.environment.set('accessToken', pm.response.json().data.accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/login (wrong password)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Проверка, что сообщение не раскрывает, существует ли учётная запись.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"definitely-wrong\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('error message is generic', function () {",
+                  "  pm.expect(pm.response.json().error.message).to.not.include('password');",
+                  "  pm.expect(pm.response.json().error.message).to.not.include('не найден');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/auth/me",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/health",
+              "raw": "{{baseUrl}}/api/auth/me",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "health"]
+              "path": ["api", "auth", "me"]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('role is admin', function () {",
+                  "  pm.expect(pm.response.json().data.role).to.eql('admin');",
+                  "});",
+                  "pm.test('response does not leak password/hash', function () {",
+                  "  const body = JSON.stringify(pm.response.json());",
+                  "  pm.expect(body).to.not.include('password');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/auth/me (no token)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Защищённый эндпоинт без токена — должен вернуть 401.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('error code is UNAUTHORIZED', function () {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('UNAUTHORIZED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/refresh",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Использует refresh-cookie, установленную запросом «Login as admin» в этой же сессии Postman.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('returns a new access token', function () {",
+                  "  pm.expect(pm.response.json().data.accessToken).to.be.a('string').and.not.empty;",
+                  "});",
+                  "pm.environment.set('accessToken', pm.response.json().data.accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Удаляет refresh-cookie и отзывает refresh-токен. После этого запроса для продолжения работы с коллекцией нужно заново прогнать «Login as admin».",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/auth/login (viewer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Отдельный токен viewer-роли (сидовый viewer@example.com) — нужен для проверки 403 в «Negative & security scenarios» (viewer не может создавать оборудование). Не трогает {{accessToken}} (admin), на котором держится остальная коллекция.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"viewer@example.com\",\n  \"password\": \"ChangeMe123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.environment.set('viewerAccessToken', pm.response.json().data.accessToken);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /api/health/live",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health/live",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health", "live"]
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
@@ -41,6 +364,37 @@
               }
             }
           ]
+        },
+        {
+          "name": "GET /api/health/ready",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health", "ready"]
+            },
+            "description": "Готовность к обслуживанию — учитывает доступность БД (см. раздел README про /api/health/ready).",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('database is up', function () {",
+                  "  pm.expect(pm.response.json().data.database).to.eql('up');",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -52,8 +406,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/equipment",
@@ -94,8 +450,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/equipment",
@@ -133,9 +491,18 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "equipment"],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" },
-                { "key": "sort", "value": "-createdAt" }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "sort",
+                  "value": "-createdAt"
+                }
               ]
             }
           },
@@ -189,8 +556,10 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}",
@@ -282,7 +651,7 @@
           "name": "DELETE /api/equipment/:id2 — success (no open requests)",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment/{{equipmentId2}}",
               "host": ["{{baseUrl}}"],
@@ -312,8 +681,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests",
@@ -351,8 +722,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/assignees",
@@ -393,9 +766,18 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "requests"],
               "query": [
-                { "key": "status", "value": "new" },
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "10" }
+                {
+                  "key": "status",
+                  "value": "new"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
               ]
             }
           },
@@ -448,8 +830,10 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}",
@@ -482,8 +866,10 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/status",
@@ -516,8 +902,10 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/status",
@@ -580,8 +968,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/spare-parts",
@@ -615,7 +1005,7 @@
           "name": "DELETE /api/requests/:id/assignees/:userId — remove member",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}/assignees/{{technicianId2}}",
               "host": ["{{baseUrl}}"],
@@ -640,7 +1030,7 @@
           "name": "DELETE /api/requests/:id",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{requestId}}",
               "host": ["{{baseUrl}}"],
@@ -768,7 +1158,12 @@
               "raw": "{{baseUrl}}/api/reports/equipment-load?minRequests=3",
               "host": ["{{baseUrl}}"],
               "path": ["api", "reports", "equipment-load"],
-              "query": [{ "key": "minRequests", "value": "3" }]
+              "query": [
+                {
+                  "key": "minRequests",
+                  "value": "3"
+                }
+              ]
             },
             "description": "Демо-сид даёт по 3 заявки на каждую единицу оборудования — при minRequests=3 отсекать никого не должно, при большем значении список опустеет."
           },
@@ -798,7 +1193,12 @@
               "raw": "{{baseUrl}}/api/reports/equipment-load?minRequests=-1",
               "host": ["{{baseUrl}}"],
               "path": ["api", "reports", "equipment-load"],
-              "query": [{ "key": "minRequests", "value": "-1" }]
+              "query": [
+                {
+                  "key": "minRequests",
+                  "value": "-1"
+                }
+              ]
             }
           },
           "response": [],
@@ -824,8 +1224,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/equipment",
@@ -866,8 +1268,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/equipment",
@@ -928,8 +1332,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests",
@@ -962,7 +1368,7 @@
           "name": "DELETE /api/equipment/:id — conflict, has open requests (409)",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/equipment/{{equipmentId}}",
               "host": ["{{baseUrl}}"],
@@ -980,7 +1386,7 @@
                   "pm.sendRequest({",
                   "  url: pm.environment.get('baseUrl') + '/api/requests',",
                   "  method: 'POST',",
-                  "  header: { 'Content-Type': 'application/json', 'X-API-Key': pm.environment.get('apiKey') },",
+                  "  header: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pm.environment.get('accessToken') },",
                   "  body: { mode: 'raw', raw: JSON.stringify({ equipmentId: pm.environment.get('equipmentId'), title: 'Guard request for delete conflict check', priority: 'low' }) }",
                   "}, function () {});"
                 ]
@@ -1005,8 +1411,10 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{transitionCheckRequestId}}/status",
@@ -1029,14 +1437,14 @@
                   "pm.sendRequest({",
                   "  url: pm.environment.get('baseUrl') + '/api/requests',",
                   "  method: 'POST',",
-                  "  header: { 'Content-Type': 'application/json', 'X-API-Key': pm.environment.get('apiKey') },",
+                  "  header: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pm.environment.get('accessToken') },",
                   "  body: { mode: 'raw', raw: JSON.stringify({ equipmentId: pm.environment.get('equipmentId'), title: 'Guard request for invalid transition check', priority: 'low' }) }",
                   "}, function (err, created) {",
                   "  const guardId = created.json().data.id;",
                   "  pm.sendRequest({",
                   "    url: pm.environment.get('baseUrl') + '/api/requests/' + guardId + '/status',",
                   "    method: 'PATCH',",
-                  "    header: { 'Content-Type': 'application/json', 'X-API-Key': pm.environment.get('apiKey') },",
+                  "    header: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pm.environment.get('accessToken') },",
                   "    body: { mode: 'raw', raw: JSON.stringify({ status: 'rejected' }) }",
                   "  }, function () {",
                   "    pm.environment.set('transitionCheckRequestId', guardId);",
@@ -1064,8 +1472,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{assigneeRequestId}}/assignees",
@@ -1088,7 +1498,7 @@
                   "pm.sendRequest({",
                   "  url: pm.environment.get('baseUrl') + '/api/requests',",
                   "  method: 'POST',",
-                  "  header: { 'Content-Type': 'application/json', 'X-API-Key': pm.environment.get('apiKey') },",
+                  "  header: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pm.environment.get('accessToken') },",
                   "  body: { mode: 'raw', raw: JSON.stringify({ equipmentId: pm.environment.get('equipmentId'), title: 'Guard request for unknown technician check', priority: 'low' }) }",
                   "}, function (err, created) {",
                   "  pm.environment.set('assigneeRequestId', created.json().data.id);",
@@ -1124,8 +1534,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{assigneeRequestId}}/assignees",
@@ -1159,8 +1571,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{assigneeRequestId}}/assignees",
@@ -1194,8 +1608,10 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/requests/{{noBrigadeRequestId}}/status",
@@ -1218,7 +1634,7 @@
                   "pm.sendRequest({",
                   "  url: pm.environment.get('baseUrl') + '/api/requests',",
                   "  method: 'POST',",
-                  "  header: { 'Content-Type': 'application/json', 'X-API-Key': pm.environment.get('apiKey') },",
+                  "  header: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pm.environment.get('accessToken') },",
                   "  body: { mode: 'raw', raw: JSON.stringify({ equipmentId: pm.environment.get('equipmentId'), title: 'Guard request for no-brigade check', priority: 'low' }) }",
                   "}, function (err, created) {",
                   "  pm.environment.set('noBrigadeRequestId', created.json().data.id);",
@@ -1241,19 +1657,27 @@
           ]
         },
         {
-          "name": "POST /api/equipment — missing X-API-Key (401)",
+          "name": "POST /api/equipment — missing Authorization (401)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/api/equipment",
               "host": ["{{baseUrl}}"],
               "path": ["api", "equipment"]
             },
-            "description": "Без X-API-Key. Если на сервере API_KEYS пустой (проверка отключена), придёт 201 — тест тоже это допускает.",
+            "description": "Без заголовка Authorization — admin-only эндпоинт теперь всегда требует валидный access-токен.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Unauthorized attempt\",\n  \"type\": \"sensor\",\n  \"serialNumber\": \"SN-UNAUTH-{{$randomInt}}\",\n  \"location\": {\n    \"lat\": 0,\n    \"lon\": 0\n  },\n  \"installedAt\": \"2023-01-01\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
             }
           },
           "response": [],
@@ -1263,13 +1687,61 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status is 201 or 401', function () {",
-                  "  pm.expect([201, 401]).to.include(pm.response.code);",
-                  "});",
-                  "pm.test('if 401, error.code is UNAUTHORIZED', function () {",
-                  "  if (pm.response.code === 401) {",
-                  "    pm.expect(pm.response.json().error.code).to.eql('UNAUTHORIZED');",
-                  "  }",
+                  "pm.test('status is 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('error.code is UNAUTHORIZED', function () {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('UNAUTHORIZED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/equipment — viewer role, insufficient rights (403)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/equipment",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "equipment"]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{viewerAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Залогиненный viewer (из «Auth → Login as viewer») не имеет прав создавать оборудование — admin-only операция.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Forbidden attempt\",\n  \"type\": \"sensor\",\n  \"serialNumber\": \"SN-FORBIDDEN-{{$randomInt}}\",\n  \"location\": {\n    \"lat\": 0,\n    \"lon\": 0\n  },\n  \"installedAt\": \"2023-01-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', function () { pm.response.to.have.status(403); });",
+                  "pm.test('error.code is FORBIDDEN', function () {",
+                  "  pm.expect(pm.response.json().error.code).to.eql('FORBIDDEN');",
                   "});"
                 ]
               }
@@ -1310,9 +1782,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/health",
+              "raw": "{{baseUrl}}/api/health/live",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "health"]
+              "path": ["api", "health", "live"]
             },
             "description": "Pre-request забивает лимит пачкой запросов (rateLimitMax + 10) перед основным. Если у вас RATE_LIMIT_MAX больше 100 на сервере — поправьте rateLimitMax в окружении."
           },
@@ -1328,7 +1800,7 @@
                   "function fireNext(done) {",
                   "  if (sent >= total) return done();",
                   "  sent++;",
-                  "  pm.sendRequest({ url: pm.environment.get('baseUrl') + '/api/health', method: 'GET' }, function () {",
+                  "  pm.sendRequest({ url: pm.environment.get('baseUrl') + '/api/health/live', method: 'GET' }, function () {",
                   "    fireNext(done);",
                   "  });",
                   "}",
@@ -1357,5 +1829,20 @@
       ]
     }
   ],
-  "variable": [{ "key": "baseUrl", "value": "http://localhost:3000" }]
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  }
 }
