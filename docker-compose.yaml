@@ -11,6 +11,7 @@ services:
       APP_PGUSER: ${APP_PGUSER}
       APP_PGPASSWORD: ${APP_PGPASSWORD}
       APP_DB_NAME_TEST: ${PGDATABASE_TEST}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD}
     ports:
       - '127.0.0.1:${PGPORT:-5432}:5432'
     volumes:
@@ -94,6 +95,44 @@ services:
       timeout: 5s
       retries: 3
 
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    restart: unless-stopped
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      api:
+        condition: service_healthy
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    restart: unless-stopped
+    volumes:
+      - ./deploy/alertManager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SERVER_ROOT_URL: 'https://${NGINX_SERVER_NAME:-localhost}/grafana/'
+      GF_SERVER_SERVE_FROM_SUB_PATH: 'true'
+      PGDATABASE: ${PGDATABASE}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD}
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_started
+      db:
+        condition: service_healthy
+
 volumes:
   pgdata:
   tls-certs:
+  prometheus-data:
+  grafana-data:

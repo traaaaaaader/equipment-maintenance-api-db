@@ -10,6 +10,7 @@ import { requestId } from './middlewares/requestId.js';
 import { httpLogger } from './middlewares/httpLogger.js';
 import { contextMiddleware } from './utils/context.js';
 import { apiRateLimiter } from './middlewares/rateLimiter.js';
+import { metricsMiddleware, metricsHandler } from './middlewares/metrics.js';
 import { notFoundHandler } from './middlewares/notFoundHandler.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { routes } from './routes/index.js';
@@ -19,18 +20,12 @@ export function createApp(): Express {
   const app = express();
 
   app.disable('x-powered-by');
-  // Ровно один обратный прокси (nginx, см. deploy/nginx/) перед приложением во всех
-  // окружениях, где порт приложения не публикуется наружу — поэтому доверяем
-  // ровно одному хопу X-Forwarded-*, а не 'true' (самый левый адрес в
-  // X-Forwarded-For — это и есть клиент, его легко подделать) и не пресету вида
-  // 'uniquelocal' (во внутренней сети у самих пользователей тоже частные адреса).
-  // Без этого req.ip всегда равен адресу контейнера nginx — rate-limit по IP
-  // (apiRateLimiter, authRateLimiter) превращается в общий лимит на всех клиентов.
   app.set('trust proxy', 1);
 
   app.use(requestId);
   app.use(httpLogger);
   app.use(contextMiddleware);
+  app.use(metricsMiddleware);
 
   app.use(
     helmet({
@@ -48,6 +43,8 @@ export function createApp(): Express {
       methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     }),
   );
+
+  app.get('/metrics', metricsHandler);
 
   app.use('/api', apiRateLimiter);
 

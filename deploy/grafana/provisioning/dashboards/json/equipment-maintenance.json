@@ -1,0 +1,219 @@
+{
+  "title": "Equipment Maintenance — Overview",
+  "uid": "equipment-maintenance-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "tags": ["equipment-maintenance", "case-4"],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request rate by route (RPS)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_requests_total[5m])) by (route)",
+          "legendFormat": "{{route}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "5xx error ratio",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1, "min": 0 }, "overrides": [] },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(http_requests_total{status_code=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))",
+          "legendFormat": "5xx ratio",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Latency p95 / p50",
+      "type": "timeseries",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "API service up",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 8, "w": 6, "h": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "DOWN", "color": "red" },
+                "1": { "text": "UP", "color": "green" }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "up{job=\"equipment-maintenance-api\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Average request closing time (hours)",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 8, "w": 6, "h": 4 },
+      "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+      "fieldConfig": { "defaults": { "unit": "h", "decimals": 1 }, "overrides": [] },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+          "format": "table",
+          "rawSql": "SELECT avg(extract(epoch FROM (closed_at - created_at))) / 3600 AS value FROM maintenance_requests WHERE status = 'done' AND closed_at IS NOT NULL;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Overdue planned maintenance",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 4 },
+      "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+          "format": "table",
+          "rawSql": "SELECT count(*) AS value FROM maintenance_requests WHERE planned_at IS NOT NULL AND planned_at < now() AND status IN ('new', 'in_progress');",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Requests by status",
+      "type": "piechart",
+      "gridPos": { "x": 0, "y": 12, "w": 6, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+          "format": "table",
+          "rawSql": "SELECT status, count(*) AS count FROM maintenance_requests GROUP BY status ORDER BY status;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Requests by priority",
+      "type": "piechart",
+      "gridPos": { "x": 6, "y": 12, "w": 6, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+          "format": "table",
+          "rawSql": "SELECT priority, count(*) AS count FROM maintenance_requests GROUP BY priority ORDER BY priority;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Equipment status by site",
+      "type": "bargauge",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+          "format": "table",
+          "rawSql": "SELECT s.name || ' / ' || e.status AS metric, count(*) AS value FROM equipment e JOIN sites s ON s.id = e.site_id GROUP BY s.name, e.status ORDER BY s.name, e.status;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Technician workload (open requests)",
+      "type": "bargauge",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+          "format": "table",
+          "rawSql": "SELECT t.full_name AS metric, count(*) AS value FROM request_assignees ra JOIN technicians t ON t.id = ra.technician_id JOIN maintenance_requests mr ON mr.id = ra.request_id WHERE mr.status IN ('new', 'in_progress') GROUP BY t.full_name ORDER BY value DESC;",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Low stock spare parts (< 5 units)",
+      "type": "table",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+      "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "postgres-readonly" },
+          "format": "table",
+          "rawSql": "SELECT name, sku, quantity FROM spare_parts WHERE quantity < 5 ORDER BY quantity ASC;",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}
