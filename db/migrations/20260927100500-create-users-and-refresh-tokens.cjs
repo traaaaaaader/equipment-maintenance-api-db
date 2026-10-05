@@ -11,10 +11,6 @@ module.exports = {
       password_hash: { type: Sequelize.STRING(255), allowNull: false },
       name: { type: Sequelize.STRING(150), allowNull: false },
       role: { type: Sequelize.ENUM(...ROLES), allowNull: false, defaultValue: 'viewer' },
-      // Связывает учётную запись technician-роли с существующим специалистом
-      // (technicians, Кейс 3) — по нему ABAC-правило проверяет назначение на заявку.
-      // Nullable и unique: не у каждого пользователя есть такая связь, но один
-      // специалист не может быть привязан к двум аккаунтам одновременно.
       technician_id: {
         type: Sequelize.UUID,
         allowNull: true,
@@ -50,5 +46,6 @@ module.exports = {
   async down(queryInterface) {
     await queryInterface.dropTable('refresh_tokens');
     await queryInterface.dropTable('users');
+    await queryInterface.dropEnum('enum_users_role');
   },
 };

@@ -1,0 +1,42 @@
+groups:
+  - name: equipment-maintenance-api
+    rules:
+      - alert: ServiceDown
+        expr: up{job="equipment-maintenance-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'API недоступен для Prometheus'
+          description: 'Скрейп job="equipment-maintenance-api" не отвечает уже {{ $value }} минут(ы).'
+
+      - alert: HighErrorRate
+        expr: >
+          sum(rate(http_requests_total{status_code=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Высокая доля ответов 5xx'
+          description: 'Доля ошибок 5xx за последние 5 минут превышает 5% ({{ $value | humanizePercentage }}).'
+
+      - alert: HighLatencyP95
+        expr: >
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '95-й перцентиль времени ответа выше 1с'
+          description: 'p95 длительности запросов за 5 минут: {{ $value | humanizeDuration }}.'
+
+      - alert: NoTraffic
+        expr: sum(rate(http_requests_total[15m])) == 0
+        for: 15m
+        labels:
+          severity: info
+        annotations:
+          summary: 'Нет входящих запросов за последние 15 минут'
+          description: 'Возможно, nginx/клиенты не могут достучаться до API — проверьте цепочку nginx → api.'
