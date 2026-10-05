@@ -145,7 +145,10 @@ describe('Equipment CRUD (admin)', () => {
   });
 
   it('prevents deleting equipment with open requests (409) and allows it otherwise', async () => {
-    const eq = await request(app).post('/api/equipment').send(sampleEquipment());
+    const eq = await request(app)
+      .post('/api/equipment')
+      .set(authHeader(admin.token))
+      .send(sampleEquipment());
     const eqId = eq.body.data.id;
 
     await request(app)
